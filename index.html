@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<!--
+  WindowJet: live aircraft display for a wall-mounted tablet (JetClock-style replica)
+
+  Directed by: Nathan
+  Written by:  Claude (Sonnet 5.5, Anthropic)
+  Created:     2026-10-19
+  Project docs (same folder): README.md, AGENTS.md (LLMs start here), LOG.md, CHANGELOG.md, docs/FINDINGS.md
+
+  CHANGE LOG
+  2026-10-19  v0.1  Claude, directed by Nathan
+              Initial version: polls a public ADS-B API, picks the nearest aircraft
+              inside the window's field of view, animates it at its true sky position,
+              shows callsign, route, altitude, speed, vertical rate, aircraft type.
+              Includes demo mode (?demo=1). Written in ES5 for an old Galaxy Tab A6.
+  2026-10-19  v0.2  Claude, directed by Nathan
+              Demo mode now has a control bar: buttons spawn simulated planes (departure west,
+              departure east, arrival, heavy jet, helicopter, head-on, random), "Clear sky",
+              and a 1x/3x/6x fast-forward. Aircraft records gained an optional _k time scale
+              used only by the simulator. Live-data code path unchanged.
+              Fix found in testing: simulated planes now start just inside the edge of the
+              window's view so they appear immediately after a click.
+  2026-10-19  v0.3  Claude, directed by Nathan
+              Demo mode (fake planes only) is now the default whenever no ?lat/?lon is given,
+              so the page works when simply opened. Live mode starts only once coordinates are set.
+              Reason: browser testing showed the public ADS-B feeds block requests from web pages
+              (CORS), so live data needs a relay that has not been built yet.
+  2026-10-19  v0.3.1  Claude, directed by Nathan
+              Header comment only: added a pointer to the project docs. No code change.
+
+  NOT VERIFIED AGAINST LIVE DATA (the build sandbox could not reach the APIs):
+   - exact JSON field names returned by api.adsb.lol (written from the documented
+     ADSBExchange v2 format: ac[], hex, flight, t, alt_baro, gs, track, baro_rate, lat, lon)
+   - whether api.adsb.lol / api.adsb.one / api.adsbdb.com send CORS headers that allow
+     a browser page on github.io to call them
+   - adsbdb route field names (iata_code, municipality, airline.name)
+  Open the page on a real device with ?debug=1 to see what actually comes back.
+
+  URL options: ?demo=1  ?debug=1  ?lat=..&lon=..  ?heading=190  ?fov=140
+               ?dist=6 (max nautical miles)  ?alt=12000 (max feet)  ?units=aviation
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b1220">
+<title>WindowJet</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0b1220;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #f2f5fa;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #app { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column; }
+
+  /* ---------- sky ---------- */
+  #sky { position: relative; -webkit-flex: 1 1 auto; flex: 1 1 auto; min-height: 0; overflow: hidden;
+    background: linear-gradient(to bottom, #060b1a 0%, #16264a 100%); }
+  #sky.day { background: linear-gradient(to bottom, #3f86c4 0%, #c3e3f7 100%); }
+  #sky.dusk { background: linear-gradient(to bottom, #2a2f66 0%, #e7966b 100%); }
+  #ground { position: absolute; left: 0; right: 0; bottom: 0; height: 7%;
+    background: rgba(5, 10, 20, 0.55); }
+  #clock { position: absolute; left: 0; right: 0; top: 50%; text-align: center; margin-top: -9vmin;
+    font-size: 18vmin; font-weight: 200; letter-spacing: 0.02em; opacity: 0;
+    -webkit-transition: opacity 0.8s; transition: opacity 0.8s; text-shadow: 0 2px 20px rgba(0,0,0,0.35); }
+  #sky.idle #clock { opacity: 0.95; }
+  .dot { position: absolute; width: 1.2vmin; height: 1.2vmin; margin: -0.6vmin 0 0 -0.6vmin;
+    border-radius: 50%; background: #fff; opacity: 0; }
+  #plane { position: absolute; left: 0; top: 0; width: 24vmin; height: 7.2vmin; opacity: 0;
+    -webkit-transition: opacity 0.7s; transition: opacity 0.7s; will-change: transform; }
+  #sky.live #plane { opacity: 1; }
+  #plane svg { display: block; width: 100%; height: 100%; }
+  #banner { position: absolute; left: 2vmin; right: 2vmin; top: 2vmin; padding: 1.4vmin 2vmin;
+    background: rgba(255, 176, 0, 0.92); color: #1a1200; font-size: 2.4vmin; border-radius: 1vmin;
+    display: none; }
+  #debug { position: absolute; left: 1vmin; bottom: 8%; right: 1vmin; font: 1.7vmin monospace;
+    color: #b6ffb6; background: rgba(0,0,0,0.65); padding: 0.8vmin; display: none; white-space: pre-wrap;
+    max-height: 40%; overflow: hidden; }
+
+  /* ---------- info panel ---------- */
+  #panel { -webkit-flex: 0 0 auto; flex: 0 0 auto; height: 40%; background: #0b1220;
+    padding: 2.2vmin 4vmin 1.6vmin; position: relative;
+    display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+    -webkit-justify-content: space-between; justify-content: space-between; }
+  #head { display: -webkit-flex; display: flex; -webkit-align-items: baseline; align-items: baseline;
+    -webkit-justify-content: space-between; justify-content: space-between; }
+  #callsign { font-size: 11vmin; font-weight: 700; letter-spacing: 0.03em; line-height: 1; }
+  #airline { font-size: 3.6vmin; color: #8fa0bb; text-align: right; }
+  #route { font-size: 7vmin; font-weight: 600; line-height: 1.05; }
+  #route .arrow { color: #4fc3ff; margin: 0 1.6vmin; }
+  #cities { font-size: 3.2vmin; color: #8fa0bb; margin-top: 0.4vmin; }
+  #stats { display: -webkit-flex; display: flex; }
+  .stat { -webkit-flex: 1 1 0; flex: 1 1 0; border-top: 0.5vmin solid #1d2b45; padding-top: 1vmin; }
+  .stat .v { font-size: 6.4vmin; font-weight: 600; }
+  .stat .u { font-size: 2.6vmin; color: #8fa0bb; margin-left: 0.6vmin; font-weight: 400; }
+  .stat .l { font-size: 2.2vmin; color: #6f819e; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 0.2vmin; }
+  #idleMsg { display: none; font-size: 4.6vmin; color: #8fa0bb; text-align: center; margin: auto; line-height: 1.5; }
+  #idleMsg small { display: block; font-size: 3vmin; color: #5d6f8b; }
+  #panel.idle #head, #panel.idle #route, #panel.idle #cities, #panel.idle #stats { display: none; }
+  #panel.idle #idleMsg { display: block; }
+  #status { position: absolute; right: 2vmin; bottom: 1.4vmin; width: 1.6vmin; height: 1.6vmin; border-radius: 50%;
+    background: #555; }
+  #status.ok { background: #3ddc84; } #status.stale { background: #ffb000; } #status.err { background: #ff5d5d; }
+  #demoBar { position: absolute; left: 1.5vmin; right: 1.5vmin; top: 1.5vmin; z-index: 5;
+    display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+  #demoBar button { font: inherit; font-size: 2.5vmin; color: #f2f5fa; background: rgba(11, 18, 32, 0.72);
+    border: 0.3vmin solid rgba(143, 160, 187, 0.55); border-radius: 3vmin; padding: 1.1vmin 2.2vmin;
+    margin: 0 1vmin 1vmin 0; cursor: pointer; }
+  #demoBar button.on { background: #4fc3ff; color: #06101f; border-color: #4fc3ff; }
+  #demoBar .gap { width: 2vmin; }
+  #chip { display: inline-block; font-size: 2.2vmin; letter-spacing: 0.12em; padding: 0.4vmin 1.4vmin;
+    border-radius: 3vmin; background: #1d2b45; color: #4fc3ff; margin-left: 2vmin; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sky" class="idle">
+    <div id="ground"></div>
+    <div id="clock"></div>
+    <div id="trail"></div>
+    <div id="plane">
+      <svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22 26 L8 3 L34 3 L56 22 Z" fill="#dfe6f0" stroke="#33415c" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M78 32 L124 32 L98 54 L68 54 Z" fill="#b9c4d6" stroke="#33415c" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M10 30 Q10 21 32 20 L150 20 Q186 21 196 30 Q186 39 150 40 L32 40 Q10 39 10 30 Z" fill="#f4f7fb" stroke="#33415c" stroke-width="1.5"/>
+        <ellipse cx="112" cy="44" rx="17" ry="6.5" fill="#8d9bb2" stroke="#33415c" stroke-width="1.5"/>
+        <path d="M40 28 L150 28" stroke="#33415c" stroke-width="2.4" stroke-dasharray="3 5" fill="none"/>
+      </svg>
+    </div>
+    <div id="banner"></div>
+    <div id="debug"></div>
+  </div>
+  <div id="panel" class="idle">
+    <div id="head"><div><span id="callsign">-</span><span id="chip"></span></div><div id="airline"></div></div>
+    <div><div id="route"></div><div id="cities"></div></div>
+    <div id="stats">
+      <div class="stat"><div><span class="v" id="vAlt">-</span><span class="u" id="uAlt"></span></div><div class="l">Altitude</div></div>
+      <div class="stat"><div><span class="v" id="vSpd">-</span><span class="u" id="uSpd"></span></div><div class="l">Speed</div></div>
+      <div class="stat"><div><span class="v" id="vVr">-</span><span class="u" id="uVr"></span></div><div class="l">Vertical</div></div>
+      <div class="stat"><div><span class="v" id="vType">-</span></div><div class="l">Aircraft</div></div>
+    </div>
+    <div id="idleMsg">Watching the sky<small id="idleSub"></small></div>
+    <div id="status"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= CONFIG (edit here, or override with URL params) ================= */
+  var CONFIG = {
+    // PLACEHOLDER location. Replace with the coordinates of your window.
+    HOME_LAT: 38.8512, HOME_LON: -77.0402, HOME_SET: false,
+    WINDOW_HEADING: 190,   // compass direction the window faces, degrees
+    FOV_DEG: 140,          // how wide a slice of sky the window shows, degrees
+    MAX_DIST_NM: 6,        // ignore aircraft farther than this (nautical miles)
+    MAX_ALT_FT: 12000,     // ignore aircraft higher than this (feet)
+    EL_MAX_DEG: 25,        // elevation angle that maps to the top of the sky area
+    RADIUS_NM: 10,         // how far the API is asked to search
+    POLL_MS: 5000,         // API poll interval (the APIs I read about allow 1 request per second)
+    UNITS: 'metric',       // 'metric' (m, km/h, m/s) or 'aviation' (ft, kt, fpm)
+    API_BASES: ['https://api.adsb.lol/v2/point', 'https://api.adsb.one/v2/point'],
+    ROUTE_API: 'https://api.adsbdb.com/v0/callsign/',
+    DEMO: false, DEBUG: false
+  };
+
+  /* ================= pure helpers (unit-tested) ================= */
+  var M_PER_DEG = 111320;
+  function toRad(d) { return d * Math.PI / 180; }
+  function toDeg(r) { return r * 180 / Math.PI; }
+  function norm360(a) { a = a % 360; return a < 0 ? a + 360 : a; }
+  function norm180(a) { a = norm360(a); return a > 180 ? a - 360 : a; }
+  function isNum(x) { return typeof x === 'number' && isFinite(x); }
+  function firstNum() { for (var i = 0; i < arguments.length; i++) { if (isNum(arguments[i])) { return arguments[i]; } } return 0; }
+  function clamp(x, lo, hi) { return x < lo ? lo : (x > hi ? hi : x); }
+
+  // Turn one raw API record into a clean aircraft, or null if unusable / on the ground.
+  function normalize(raw, now) {
+    if (!raw || !isNum(raw.lat) || !isNum(raw.lon)) { return null; }
+    var alt = isNum(raw.alt_baro) ? raw.alt_baro : (isNum(raw.alt_geom) ? raw.alt_geom : null);
+    if (alt === null) { return null; }   // "ground" or no altitude
+    var seen = isNum(raw.seen_pos) ? raw.seen_pos : 0;
+    return {
+      hex: raw.hex || '', callsign: (raw.flight || '').replace(/\s+$/, ''), reg: raw.r || '', type: raw.t || '',
+      alt: alt, gs: firstNum(raw.gs), track: firstNum(raw.track),
+      vr: firstNum(raw.baro_rate, raw.geom_rate), lat: raw.lat, lon: raw.lon, _t: now - seen * 1000,
+      _k: isNum(raw._k) ? raw._k : 1   // simulator time scale; always 1 for real data
+    };
+  }
+
+  // Where is this aircraft now (dead-reckoned from its last fix) as seen from home?
+  function evaluate(ac, now, cfg) {
+    var secs = clamp((now - ac._t) / 1000, 0, 60) * (ac._k || 1);
+    var v = ac.gs * 0.514444, tr = toRad(ac.track);
+    var lat = ac.lat + Math.cos(tr) * v * secs / M_PER_DEG;
+    var lon = ac.lon + Math.sin(tr) * v * secs / (M_PER_DEG * Math.cos(toRad(ac.lat)));
+    var altFt = ac.alt + ac.vr * secs / 60;
+    var e = (lon - cfg.HOME_LON) * M_PER_DEG * Math.cos(toRad(cfg.HOME_LAT));
+    var n = (lat - cfg.HOME_LAT) * M_PER_DEG;
+    var distM = Math.sqrt(e * e + n * n);
+    var az = norm360(toDeg(Math.atan2(e, n)));
+    var el = toDeg(Math.atan2(altFt * 0.3048, distM));
+    var rel = norm180(az - cfg.WINDOW_HEADING);
+    return { lat: lat, lon: lon, altFt: altFt, distNm: distM / 1852, az: az, el: el, rel: rel,
+             inFov: Math.abs(rel) <= cfg.FOV_DEG / 2 };
+  }
+
+  function isCandidate(ev, cfg) {
+    return ev.inFov && ev.distNm <= cfg.MAX_DIST_NM && ev.altFt <= cfg.MAX_ALT_FT && ev.altFt > 0;
+  }
+
+  // Stick with the current aircraft while it stays valid, otherwise take the nearest one.
+  function pick(list, now, cfg, currentHex) {
+    var best = null, i, ev, cur = null;
+    for (i = 0; i < list.length; i++) {
+      ev = evaluate(list[i], now, cfg);
+      if (!isCandidate(ev, cfg)) { continue; }
+      if (list[i].hex === currentHex) { cur = { ac: list[i], ev: ev }; }
+      if (best === null || ev.distNm < best.ev.distNm) { best = { ac: list[i], ev: ev }; }
+    }
+    return cur || best;
+  }
+
+  // +1 = moves to the right on screen, -1 = to the left, as seen looking out the window.
+  function spriteDir(track, heading, prev) {
+    var lateral = Math.sin(toRad(norm180(track - heading)));
+    if (Math.abs(lateral) < 0.15) { return prev || 1; }
+    return lateral > 0 ? 1 : -1;
+  }
+
+  // Nose pitch for the sprite, exaggerated 1.5x so a climb is visible.
+  function pitchDeg(vrFpm, gsKt) {
+    if (!(gsKt > 20)) { return 0; }
+    var ang = toDeg(Math.atan2(vrFpm / 60, gsKt * 1.68781));
+    return clamp(ang * 1.5, -22, 22);
+  }
+
+  function formatStats(altFt, gsKt, vrFpm, units) {
+    if (units === 'aviation') {
+      return { alt: Math.round(altFt / 100) * 100, altU: 'ft', spd: Math.round(gsKt), spdU: 'kt',
+               vr: Math.round(vrFpm / 50) * 50, vrU: 'fpm' };
+    }
+    return { alt: Math.round(altFt * 0.3048 / 10) * 10, altU: 'm', spd: Math.round(gsKt * 1.852), spdU: 'km/h',
+             vr: Math.round(vrFpm * 0.00508 * 10) / 10, vrU: 'm/s' };
+  }
+
+  function parseRoute(json) {
+    var fr = json && json.response && json.response.flightroute;
+    if (!fr) { return null; }
+    function ap(a) {
+      if (!a) { return null; }
+      return { code: a.iata_code || a.iata || a.icao_code || a.icao || '', city: a.municipality || a.name || '' };
+    }
+    return { airline: (fr.airline && fr.airline.name) || '', origin: ap(fr.origin), dest: ap(fr.destination) };
+  }
+
+  /* ---------- demo simulator (pure, unit-tested) ----------
+     Positions are in nautical miles east (e0) and north (n0) of home. The window faces south. */
+  var DEMO_PRESETS = [
+    { label: 'Departure west', prefix: 'DMA', type: 'A320', e0: 2.6, n0: -1.8, alt0: 700, gs: 150, track: 270, vr: 2400,
+      route: { airline: 'Demo Air', origin: { code: 'DCA', city: 'Washington' }, dest: { code: 'ORD', city: 'Chicago' } } },
+    { label: 'Departure east', prefix: 'DMB', type: 'B738', e0: -3.1, n0: -0.85, alt0: 700, gs: 155, track: 90, vr: 2200,
+      route: { airline: 'Demo Jet', origin: { code: 'DCA', city: 'Washington' }, dest: { code: 'BOS', city: 'Boston' } } },
+    { label: 'Arrival', prefix: 'DMC', type: 'E175', e0: 3.3, n0: -2.3, alt0: 2000, gs: 140, track: 270, vr: -700,
+      route: { airline: 'Demo Connect', origin: { code: 'ATL', city: 'Atlanta' }, dest: { code: 'DCA', city: 'Washington' } } },
+    { label: 'Heavy jet', prefix: 'DMH', type: 'B77W', e0: 2.95, n0: -2.05, alt0: 800, gs: 175, track: 280, vr: 1800,
+      route: { airline: 'Demo Global', origin: { code: 'IAD', city: 'Washington' }, dest: { code: 'LHR', city: 'London' } } },
+    { label: 'Helicopter', prefix: 'PAT', type: 'H60', e0: -2.65, n0: -0.9, alt0: 500, gs: 90, track: 100, vr: 0, route: null },
+    { label: 'Head-on', prefix: 'DMD', type: 'A319', e0: 0.3, n0: -5.5, alt0: 1800, gs: 140, track: 0, vr: -600,
+      route: { airline: 'Demo Air', origin: { code: 'MIA', city: 'Miami' }, dest: { code: 'DCA', city: 'Washington' } } }
+  ];
+
+  // Raw API-style record for a simulated plane that has been flying for ageSec simulated seconds.
+  function simRaw(p, ageSec, k, cfg) {
+    var v = p.gs / 3600;   // nautical miles per second
+    var eNm = p.e0 + Math.sin(toRad(p.track)) * v * ageSec;
+    var nNm = p.n0 + Math.cos(toRad(p.track)) * v * ageSec;
+    return { hex: p.hex, flight: p.callsign + ' ', t: p.type, alt_baro: p.alt0 + p.vr / 60 * ageSec,
+             gs: p.gs, track: p.track, baro_rate: p.vr,
+             lat: cfg.HOME_LAT + nNm * 1852 / M_PER_DEG,
+             lon: cfg.HOME_LON + eNm * 1852 / (M_PER_DEG * Math.cos(toRad(cfg.HOME_LAT))),
+             seen_pos: 0, _k: k, _eNm: eNm, _nNm: nNm };
+  }
+  function simAlive(raw, ageSec) {
+    return ageSec < 900 && raw.alt_baro > -50 && Math.sqrt(raw._eNm * raw._eNm + raw._nNm * raw._nNm) < 14;
+  }
+
+  var api = { normalize: normalize, evaluate: evaluate, isCandidate: isCandidate, pick: pick,
+              spriteDir: spriteDir, pitchDeg: pitchDeg, formatStats: formatStats, parseRoute: parseRoute,
+              norm180: norm180, norm360: norm360, simRaw: simRaw, simAlive: simAlive, DEMO_PRESETS: DEMO_PRESETS,
+              CONFIG: CONFIG };
+  if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
+  if (typeof document === 'undefined') { return; }
+
+  /* ================= browser app ================= */
+  function $(id) { return document.getElementById(id); }
+  var qs = {}, parts = (location.search || '').replace(/^\?/, '').split('&'), pi;
+  for (pi = 0; pi < parts.length; pi++) {
+    if (parts[pi]) { var kv = parts[pi].split('='); qs[kv[0]] = decodeURIComponent(kv[1] || ''); }
+  }
+  if (qs.lat && qs.lon) { CONFIG.HOME_LAT = parseFloat(qs.lat); CONFIG.HOME_LON = parseFloat(qs.lon); CONFIG.HOME_SET = true; }
+  if (qs.heading) { CONFIG.WINDOW_HEADING = parseFloat(qs.heading); }
+  if (qs.fov) { CONFIG.FOV_DEG = parseFloat(qs.fov); }
+  if (qs.dist) { CONFIG.MAX_DIST_NM = parseFloat(qs.dist); }
+  if (qs.alt) { CONFIG.MAX_ALT_FT = parseFloat(qs.alt); }
+  if (qs.units) { CONFIG.UNITS = qs.units; }
+  // No coordinates given means demo mode (fake planes), so the page works the moment it is opened.
+  CONFIG.DEMO = qs.demo === '1' || !CONFIG.HOME_SET; CONFIG.DEBUG = qs.debug === '1';
+
+  var sky = $('sky'), panel = $('panel'), plane = $('plane'), trailBox = $('trail');
+  var aircraft = [], nearbyCount = 0, lastOk = 0, lastErr = '', featured = null, dir = 1;
+  var routeCache = {}, routePending = {}, lastSeenLabel = '';
+  var skyW = 1, skyH = 1, dots = [], trailPts = [], lastTrail = 0, lastPick = 0, lastText = 0, apiIdx = 0;
+
+  function dbg(msg) {
+    if (!CONFIG.DEBUG) { return; }
+    var d = $('debug'); d.style.display = 'block';
+    d.textContent = (new Date()).toTimeString().slice(0, 8) + ' ' + msg + '\n' + d.textContent.slice(0, 900);
+  }
+
+  function measure() { skyW = sky.clientWidth || 1; skyH = sky.clientHeight || 1; }
+  window.addEventListener('resize', measure);
+
+  for (pi = 0; pi < 16; pi++) { var dEl = document.createElement('div'); dEl.className = 'dot'; trailBox.appendChild(dEl); dots.push(dEl); }
+
+  function setTheme() {
+    var h = (new Date()).getHours(), c = 'night';
+    if (h >= 8 && h < 17) { c = 'day'; } else if ((h >= 6 && h < 8) || (h >= 17 && h < 20)) { c = 'dusk'; }
+    sky.className = c + (featured ? ' live' : ' idle');
+  }
+
+  /* ---------- data ---------- */
+  function xhr(url, cb) {
+    var r = new XMLHttpRequest(), done = false;
+    r.open('GET', url, true); r.timeout = 8000;
+    r.onreadystatechange = function () {
+      if (r.readyState !== 4 || done) { return; }
+      done = true;
+      var j = null; try { j = JSON.parse(r.responseText); } catch (e) { j = null; }
+      cb(r.status, j);
+    };
+    r.ontimeout = function () { if (!done) { done = true; cb(0, null); } };
+    r.onerror = function () { if (!done) { done = true; cb(0, null); } };
+    r.send();
+  }
+
+  /* ---------- demo mode: simulated planes + control bar ---------- */
+  var simList = [], simCounter = 0, demoSpeed = 3, lastDemoTick = Date.now();
+
+  function demoTick() {
+    var now = Date.now(), dt = (now - lastDemoTick) / 1000, i, raw, out = [], keep = [];
+    lastDemoTick = now;
+    for (i = 0; i < simList.length; i++) {
+      simList[i].age += dt * demoSpeed;
+      raw = simRaw(simList[i].p, simList[i].age, demoSpeed, CONFIG);
+      if (simAlive(raw, simList[i].age)) { keep.push(simList[i]); out.push(raw); }
+    }
+    simList = keep;
+    return out;
+  }
+
+  function spawnSim(preset) {
+    var p = {}, key;
+    for (key in preset) { if (preset.hasOwnProperty(key)) { p[key] = preset[key]; } }
+    simCounter++;
+    p.hex = 'sim' + simCounter;
+    p.callsign = p.prefix + (100 + Math.floor(Math.random() * 900));
+    p.alt0 += Math.round((Math.random() - 0.5) * 200);        // small variety between clicks
+    p.n0 += (Math.random() - 0.5) * 0.3;
+    routeCache[p.callsign] = p.route;                          // null means "route unavailable"
+    simList.push({ p: p, age: 0 });
+    handleList(demoTick());
+    lastPick = 0;                                              // re-pick right away
+    dbg('spawned ' + p.callsign + ' (' + preset.label + ')');
+  }
+
+  function buildDemoBar() {
+    var bar = document.createElement('div'), speedBtns = [], i;
+    bar.id = 'demoBar';
+    function btn(label, fn) {
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+      b.onclick = function (e) { if (e && e.stopPropagation) { e.stopPropagation(); } fn(b); };
+      bar.appendChild(b); return b;
+    }
+    function addPreset(pr) { btn(pr.label, function () { spawnSim(pr); }); }
+    for (i = 0; i < DEMO_PRESETS.length; i++) { addPreset(DEMO_PRESETS[i]); }
+    btn('Random', function () { spawnSim(DEMO_PRESETS[Math.floor(Math.random() * DEMO_PRESETS.length)]); });
+    btn('Clear sky', function () { simList = []; handleList([]); lastPick = 0; });
+    var gap = document.createElement('div'); gap.className = 'gap'; bar.appendChild(gap);
+    function addSpeed(s) {
+      var b = btn(s + 'x', function () { demoSpeed = s; for (var j = 0; j < speedBtns.length; j++) { speedBtns[j].className = ''; } b.className = 'on'; });
+      speedBtns.push(b); if (s === demoSpeed) { b.className = 'on'; }
+    }
+    addSpeed(1); addSpeed(3); addSpeed(6);
+    sky.appendChild(bar);
+  }
+
+  function handleList(list) {
+    var now = Date.now(), out = [], i, a;
+    for (i = 0; i < list.length; i++) { a = normalize(list[i], now); if (a) { out.push(a); } }
+    aircraft = out; nearbyCount = out.length; lastOk = now; lastErr = '';
+    dbg('ok: ' + list.length + ' raw, ' + out.length + ' airborne');
+  }
+
+  function poll() {
+    if (CONFIG.DEMO) { handleList(demoTick()); return; }
+    var url = CONFIG.API_BASES[apiIdx % CONFIG.API_BASES.length] + '/' + CONFIG.HOME_LAT + '/' + CONFIG.HOME_LON + '/' + CONFIG.RADIUS_NM;
+    xhr(url, function (status, json) {
+      if (status === 200 && json) {
+        var list = json.ac || json.aircraft || [];
+        handleList(list);
+      } else {
+        lastErr = 'HTTP ' + status + ' from ' + CONFIG.API_BASES[apiIdx % CONFIG.API_BASES.length];
+        dbg('fail: ' + lastErr);
+        apiIdx++;   // try the next provider on the next poll
+      }
+    });
+  }
+
+  function ensureRoute(callsign) {
+    if (!callsign || routeCache.hasOwnProperty(callsign) || routePending[callsign]) { return; }
+    if (CONFIG.DEMO) { if (!routeCache.hasOwnProperty(callsign)) { routeCache[callsign] = null; } return; }
+    routePending[callsign] = true;
+    xhr(CONFIG.ROUTE_API + encodeURIComponent(callsign), function (status, json) {
+      routePending[callsign] = false;
+      if (status === 200) { routeCache[callsign] = parseRoute(json); dbg('route ' + callsign + ': ' + (routeCache[callsign] ? 'found' : 'none')); }
+      else if (status === 404) { routeCache[callsign] = null; }
+      else { dbg('route lookup failed (' + status + ') for ' + callsign); }   // not cached, may retry
+    });
+  }
+
+  /* ---------- rendering ---------- */
+  function renderText(f, ev) {
+    var ac = f.ac, rt = routeCache[ac.callsign] || null;
+    var s = formatStats(ev.altFt, ac.gs, ac.vr, CONFIG.UNITS);
+    $('callsign').textContent = ac.callsign || ac.reg || ac.hex;
+    $('airline').textContent = rt && rt.airline ? rt.airline : '';
+    var chip = $('chip');
+    chip.textContent = ac.vr > 300 ? 'CLIMBING' : (ac.vr < -300 ? 'DESCENDING' : 'LEVEL');
+    if (rt && rt.origin && rt.dest) {
+      $('route').innerHTML = '';
+      $('route').appendChild(document.createTextNode(rt.origin.code || '?'));
+      var ar = document.createElement('span'); ar.className = 'arrow'; ar.textContent = '→'; $('route').appendChild(ar);
+      $('route').appendChild(document.createTextNode(rt.dest.code || '?'));
+      $('cities').textContent = (rt.origin.city || '') + (rt.dest.city ? '  to  ' + rt.dest.city : '');
+    } else {
+      $('route').textContent = routeCache.hasOwnProperty(ac.callsign) ? 'Route unavailable' : '';
+      $('cities').textContent = '';
+    }
+    $('vAlt').textContent = s.alt; $('uAlt').textContent = s.altU;
+    $('vSpd').textContent = s.spd; $('uSpd').textContent = s.spdU;
+    $('vVr').textContent = (s.vr > 0 ? '+' : '') + s.vr; $('uVr').textContent = s.vrU;
+    $('vType').textContent = ac.type || '-';
+  }
+
+  function renderIdle(now) {
+    var ago = lastOk ? Math.round((now - lastOk) / 1000) : -1;
+    var sub = nearbyCount + ' aircraft within ' + CONFIG.RADIUS_NM + ' nm';
+    if (lastErr) { sub = 'Data trouble: ' + lastErr; }
+    $('idleSub').textContent = (lastSeenLabel ? 'Last seen: ' + lastSeenLabel + '  |  ' : '') + sub;
+  }
+
+  function updateStatus(now) {
+    var st = $('status');
+    st.className = lastErr && (!lastOk || now - lastOk > 20000) ? 'err' : (lastOk && now - lastOk < 20000 ? 'ok' : 'stale');
+  }
+
+  function drawTrail() {
+    var i, n = trailPts.length;
+    for (i = 0; i < dots.length; i++) {
+      if (i < n) {
+        var p = trailPts[n - 1 - i];
+        dots[i].style.left = p.x + 'px'; dots[i].style.top = p.y + 'px';
+        dots[i].style.opacity = String(0.55 * (1 - i / dots.length));
+      } else { dots[i].style.opacity = '0'; }
+    }
+  }
+
+  function frame() {
+    var now = Date.now();
+    if (now - lastPick > 500) {
+      lastPick = now;
+      var f = pick(aircraft, now, CONFIG, featured ? featured.ac.hex : null);
+      if (f && (!featured || featured.ac.hex !== f.ac.hex)) { trailPts = []; ensureRoute(f.ac.callsign); }
+      if (featured && !f) { lastSeenLabel = $('callsign').textContent; }
+      featured = f; setTheme();
+      panel.className = featured ? '' : 'idle';
+      if (!featured) { renderIdle(now); }
+      updateStatus(now);
+    }
+    if (featured) {
+      var ev = evaluate(featured.ac, now, CONFIG);
+      var x = (0.5 + ev.rel / CONFIG.FOV_DEG) * skyW;
+      var y = clamp((0.90 - ev.el / CONFIG.EL_MAX_DEG * 0.80), 0.08, 0.90) * skyH;
+      dir = spriteDir(featured.ac.track, CONFIG.WINDOW_HEADING, dir);
+      var pitch = pitchDeg(featured.ac.vr, featured.ac.gs) * -dir;
+      var tf = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) translate(-50%,-50%) rotate(' + pitch.toFixed(1) + 'deg) scaleX(' + dir + ')';
+      plane.style.webkitTransform = tf; plane.style.transform = tf;
+      if (now - lastTrail > 400) { lastTrail = now; trailPts.push({ x: x, y: y }); if (trailPts.length > 16) { trailPts.shift(); } drawTrail(); }
+      if (now - lastText > 500) { lastText = now; renderText(featured, ev); }
+    }
+    window.requestAnimationFrame(frame);
+  }
+
+  function tickClock() {
+    var d = new Date(), h = d.getHours(), m = d.getMinutes();
+    $('clock').textContent = h + ':' + (m < 10 ? '0' : '') + m;
+  }
+
+  if (!CONFIG.HOME_SET && !CONFIG.DEMO) {
+    var b = $('banner'); b.style.display = 'block';
+    b.textContent = 'Location not set yet. Add ?lat=...&lon=... to the page address (or edit CONFIG in index.html).';
+  }
+  document.documentElement.addEventListener('click', function () {
+    var el = document.documentElement;
+    var req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req && !(document.fullscreenElement || document.webkitFullscreenElement)) { try { req.call(el); } catch (e) { /* ignore */ } }
+  });
+
+  measure(); tickClock(); setInterval(tickClock, 1000); setTheme(); setInterval(setTheme, 60000);
+  if (CONFIG.DEMO) { buildDemoBar(); spawnSim(DEMO_PRESETS[0]); }
+  poll(); setInterval(poll, CONFIG.DEMO ? 1000 : CONFIG.POLL_MS);
+  window.requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
