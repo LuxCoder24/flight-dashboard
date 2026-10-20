@@ -1,0 +1,7 @@
+{
+  // Directed by: Nathan | Written by: Claude (Sonnet 5.5, Anthropic) | Date: 2026-10-19
+  // Minimal config. name, main and compatibility_date are the three required keys (Cloudflare docs, read 2026-10-19).
+  "name": "windowjet-relay",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-19"
+}

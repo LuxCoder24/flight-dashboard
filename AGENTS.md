@@ -2,7 +2,8 @@
 
 This file is tool neutral. Any assistant (Claude, ChatGPT, Gemini, a local model, a coding agent) should be able to continue the project from this file alone, plus `LOG.md` and `docs/FINDINGS.md`.
 
-Last updated: 2026-10-19 by Claude (Sonnet 5.5, Anthropic), directed by Nathan.
+Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
+Change: v0.6 separate map edition with a viewing wedge and map test instructions; prior rules retained.
 
 ## 1. Read order
 
@@ -13,7 +14,7 @@ Last updated: 2026-10-19 by Claude (Sonnet 5.5, Anthropic), directed by Nathan.
 
 ## 2. The project in one paragraph
 
-WindowJet is a single-file web page (`index.html`) for a wall-mounted Samsung Galaxy Tab. It shows the aircraft nearest to a window, as seen through that window: a plane sprite is drawn at its true position in the sky (left to right across the window), and below it are the callsign, airline, route, altitude, speed, vertical rate and aircraft type in big type. Nathan wants a clean, large design, not 200 facts. It replicates the idea of the JetClock app/device (jetclock.io). It has a demo mode with fake planes and a live mode that needs a data relay that does not exist yet.
+WindowJet is a single-file web page (`index.html`) for a wall-mounted Samsung Galaxy Tab. It shows the aircraft nearest to a window, as seen through that window: a plane sprite is drawn at its true position in the sky (left to right across the window), and below it are the callsign, airline, route, altitude, speed, vertical rate and aircraft type in big type. Nathan wants a clean, large design, not 200 facts. It replicates the idea of the JetClock app/device (jetclock.io). It has demo and live modes, plus a separate geographic map edition (`map.html`) with an adjustable forward viewing wedge. The relay in `worker/` was deployed by Nathan; see the relay sessions in LOG.md for its last known failure and diagnostic handoff. Current production configuration was not inspected during the map session.
 
 ## 3. Rules for every contributor (human or LLM)
 
@@ -39,6 +40,12 @@ These come from Nathan. Follow all of them.
 - The pure logic sits above a line that says `if (typeof document === 'undefined') { return; }` so that Node can load it for tests. Keep new pure logic above that line and export it in the `api` object.
 - Do not break demo mode. It is the only mode that can currently be shown working.
 
+## 4a. Separate map edition
+
+`map.html` is also a self-contained ES5 page with no external libraries or fonts. Geographic tile images are the only basemap dependency. Keep the original window edition intact. Map geometry helpers are exported above the document guard for tests. `inZone` uses current dead-reckoned position, great-circle distance and bearing relative to the wedge heading. Aircraft behind the viewpoint or with a fix older than 60 seconds are excluded. Live requests use the viewpoint as the centre of a padded radius query; zone-generation tracking rejects old responses after edits. `radius` is metric km by default, nm in aviation mode. `heading` and `fov` control the wedge. Saving updates the page address, not a project file.
+
+Tile service requirements and source are in README and FINDINGS. Automated map tests use `tiles=0` to avoid real tile requests. Basemap access from file URLs is disabled because the tile service expects a web Referer. Tests need jsdom; use an ephemeral dependency directory outside Drive if syncing interferes, as README's existing installation instructions already allow. Do not add node_modules to this synced project.
+
 ## 5. How the code works
 
 Config: the `CONFIG` object at the top of the script (URL options override it). Key values: `HOME_LAT/HOME_LON` (placeholders until Nathan supplies his), `WINDOW_HEADING` (190), `FOV_DEG` (140), `MAX_DIST_NM` (6), `MAX_ALT_FT` (12000), `EL_MAX_DEG` (25), `RADIUS_NM` (10), `POLL_MS` (5000), `UNITS`, `API_BASES`, `ROUTE_API`.
@@ -61,30 +68,35 @@ Screen mapping: `x = (0.5 + rel / FOV_DEG) * skyWidth`, `y = (0.90 - el / EL_MAX
 
 Browser side: `poll()` fetches (or in demo mode calls `demoTick()`), `handleList()` normalizes, `frame()` runs every animation frame (re-picks twice a second, updates text twice a second), `ensureRoute()` looks up the route by callsign and caches it (a 404 is cached as "no route"), `buildDemoBar()` makes the demo buttons.
 
-Modes: no `lat`/`lon` in the address means demo mode. Giving `lat` and `lon` means live mode. Live mode tries each entry in `API_BASES` in turn, moving to the next after a failure.
+Modes: no `lat`/`lon` in the address means demo mode. Giving `lat` and `lon` means live mode. Live mode tries each entry in `API_BASES` in turn, moving to the next after a failure. `?api=https://...` replaces `API_BASES` with the relay (https only), so the relay address lives in the tablet bookmark and not in this public file.
+
+Relay (`worker/worker.js`, a Cloudflare Worker): serves `GET /v2/point/{lat}/{lon}/{radius}`; refuses browsers from any origin other than `https://luxcoder24.github.io` (403) but allows requests with no Origin (address bar, curl); rounds coordinates to 2 decimals before calling the feed (privacy); clamps the radius to 25 nm; tries `api.adsb.lol` then `api.adsb.one`; treats HTTP errors, timeouts (6 s) and non-JSON as failures; returns 502 if both fail; keeps a 4 second best-effort in-memory cache; adds `X-Relay-Source`. To change the allowed website, edit `ALLOWED_ORIGINS` and deploy again.
 
 ## 6. Tests
 
 ```
-node tests/test_windowjet.js index.html          # expect: 49 passed, 0 failed
-node tests/dom_test.js <path-to-jsdom> index.html  # expect: 34 passed, 0 failed
+node tests/test_windowjet.js index.html          # expect: 61 passed, 0 failed
+node tests/dom_test.js <path-to-jsdom> index.html  # expect: 56 passed, 0 failed
+node worker/test_worker.mjs                        # expect: 25 passed, 0 failed (needs nothing installed)
+node tests/test_map.js map.html                     # expect: 35 passed, 0 failed
+node tests/map_dom_test.js <path-to-jsdom> map.html  # expect: 40 passed, 0 failed
 ```
 
 `jsdom` must be installed first (see `README.md`). jsdom has no layout engine, so these tests prove logic and wiring, not appearance. If you add features, add tests, and update the expected counts here and in `README.md`.
 
 ## 7. Current state and next steps (as of 2026-10-19)
 
-State: v0.3.1. Demo mode done. Live mode blocked: the public plane-position feeds (adsb.lol, adsb.one, adsb.fi, airplanes.live) send no CORS header, so a web page cannot call them (tested 2026-10-19; details in `docs/FINDINGS.md`). The route lookup (adsbdb) does work from a browser.
+State: v0.6, with a separate map edition v0.1. `map.html` has a geographic basemap and an editable forward viewing wedge. Its count includes only airborne aircraft in that wedge, at any altitude, without a three-aircraft cap. Both editions use the same relay URL option. Map controls and geometry have 35 logic and 40 page checks; window page checks now total 56. Demo mode supports automatic single/multi view switching, up to three eligible aircraft and helicopter silhouettes. `?view=auto|single|multi` sets the starting choice; Auto is the default. Multi mode shows the three nearest eligible aircraft; single focus retains the current valid aircraft. Hosted at https://luxcoder24.github.io/flight-dashboard/ (GitHub publication requested after the map session; latest LOG.md records verified deployment status). Live mode needs a relay because the public plane-position feeds (adsb.lol, adsb.one, adsb.fi, airplanes.live) send no CORS header, so a web page cannot call them (tested 2026-10-19; details in `docs/FINDINGS.md`). The route lookup (adsbdb) does work from a browser. The relay (`worker/`) is written, passes 25 mock tests and compiles under Cloudflare's tool (`wrangler deploy --dry-run`), and was deployed by Nathan, but returned 502 because both feeds failed (relay session in LOG.md). The local diagnostic details update awaits redeployment; why the feeds failed remains UNVERIFIED. Settled: GitHub user `luxcoder24`, repo `flight-dashboard`. Nathan's window coordinates were given in chat on 2026-10-19 and are kept out of the files on purpose (rule 11).
 
 Next steps, in priority order:
 
-1. **Build a CORS relay.** Proposed: a Cloudflare Worker that takes `GET /v2/point/:lat/:lon/:radius`, fetches it from adsb.lol (fall back to adsb.one) server side, returns the JSON with an `Access-Control-Allow-Origin` header limited to Nathan's GitHub Pages origin, and caches for about 5 seconds (the adsb.one docs state a limit of 1 request per second). Blocked on Nathan creating a free Cloudflare account and deploying the script himself. Also check the feeds' terms for server-to-server use first (UNVERIFIED). Then set `CONFIG.API_BASES` to the Worker URL.
+1. **Redeploy the diagnostic CORS relay** (written in v0.4; see latest LOG entry). Design: a Cloudflare Worker that takes `GET /v2/point/:lat/:lon/:radius`, fetches it from adsb.lol (fall back to adsb.one) server side, returns the JSON with an `Access-Control-Allow-Origin` header limited to Nathan's GitHub Pages origin, and caches for 4 seconds in memory (the adsb.one docs state a limit of 1 request per second). Nathan already created the account and deployed the initial relay. Inspect the diagnostic `details` response after redeployment. Also check the feeds' terms for server-to-server use first (UNVERIFIED). Then Nathan adds `&api=<worker address>` to the tablet bookmark; no code change is needed.
 2. **Test live on the real tablet** with `?debug=1`: confirm the real JSON field names (`ac`, `flight`, `alt_baro`, `gs`, `track`, `baro_rate`, `t` are written from the documented ADSBExchange v2 format and have never been seen from the live feed), and confirm the layout and old-browser support.
 3. **Keep the screen awake** on the tablet. Ideas (all UNVERIFIED on this device): Android's stay-awake-while-charging developer option, or a kiosk browser.
 4. **Visual polish** once Nathan has seen it on the tablet (spacing, text sizes, plane drawing).
 5. **Optional:** DCA runway-flow logic (which way departures fly depends on the runway in use). Verify how DCA flows work from sources before coding anything.
 
-Open questions for Nathan: his GitHub username and repo name (his window coordinates were given in chat on 2026-10-19 and are kept out of the files on purpose, see rule 11), the exact tablet model plus its Android and Chrome versions, whether the tablet is mounted portrait or landscape, and whether he wants the plane photo or other extras (he leans toward fewer facts).
+Open questions for Nathan: the exact tablet model plus its Android and Chrome versions, whether the tablet is mounted portrait or landscape, and whether he wants the plane photo or other extras (he leans toward fewer facts).
 
 ## 8. LOG.md entry format
 

@@ -32,6 +32,28 @@
               replacing the built-in feed list. https only. Needed because the public feeds block
               browsers (CORS). Not yet tried against a real deployed relay.
 
+  2026-10-19  Docs-only review  GPT-6 (OpenAI), directed by Nathan
+              Read the project and recorded familiarisation and test results in LOG.md
+              and CHANGELOG.md. Application behaviour unchanged.
+
+  2026-10-19  v0.5  GPT-6 (OpenAI), directed by Nathan
+              Helicopter silhouettes, up to three aircraft, automatic focus/multi switching,
+              manual view controls and ?view=auto|single|multi. Tests and project docs updated.
+
+  2026-10-19  Docs-only crash check  GPT-6 (OpenAI), directed by Nathan
+              Checked saved files after Google Drive crash. Logic 61, page 54 and relay 25
+              checks passed; ES5 parsing passed. LOG.md and CHANGELOG.md record limits.
+
+  2026-10-19  v0.6 map edition  GPT-6 (OpenAI), directed by Nathan
+              Added separate map.html with a selectable viewing wedge and a Map view link here.
+              Added map tests; updated AGENTS.md, README.md, FINDINGS.md, CHANGELOG.md and LOG.md.
+              Window-view behaviour retained. See map.html header for its own version history.
+
+  2026-10-19  GitHub publication  GPT-6 (OpenAI), directed by Nathan
+              Prepared the map edition and companion source/docs/tests for GitHub Pages.
+              Updated README.md, AGENTS.md, CHANGELOG.md and LOG.md deployment handoff.
+              No application behaviour changes. Publication result is recorded in LOG.md.
+
   NOT VERIFIED AGAINST LIVE DATA (the build sandbox could not reach the APIs):
    - exact JSON field names returned by api.adsb.lol (written from the documented
      ADSBExchange v2 format: ac[], hex, flight, t, alt_baro, gs, track, baro_rate, lat, lon)
@@ -72,10 +94,10 @@
   #sky.idle #clock { opacity: 0.95; }
   .dot { position: absolute; width: 1.2vmin; height: 1.2vmin; margin: -0.6vmin 0 0 -0.6vmin;
     border-radius: 50%; background: #fff; opacity: 0; }
-  #plane { position: absolute; left: 0; top: 0; width: 24vmin; height: 7.2vmin; opacity: 0;
+  .aircraftSprite { position: absolute; left: 0; top: 0; width: 24vmin; height: 7.2vmin; opacity: 0;
     -webkit-transition: opacity 0.7s; transition: opacity 0.7s; will-change: transform; }
-  #sky.live #plane { opacity: 1; }
-  #plane svg { display: block; width: 100%; height: 100%; }
+  #sky.live .aircraftSprite.visible { opacity: 1; }
+  .aircraftSprite svg { display: block; width: 100%; height: 100%; }
   #banner { position: absolute; left: 2vmin; right: 2vmin; top: 2vmin; padding: 1.4vmin 2vmin;
     background: rgba(255, 176, 0, 0.92); color: #1a1200; font-size: 2.4vmin; border-radius: 1vmin;
     display: none; }
@@ -116,6 +138,33 @@
   #demoBar .gap { width: 2vmin; }
   #chip { display: inline-block; font-size: 2.2vmin; letter-spacing: 0.12em; padding: 0.4vmin 1.4vmin;
     border-radius: 3vmin; background: #1d2b45; color: #4fc3ff; margin-left: 2vmin; vertical-align: middle; }
+  .heliIcon { display: none !important; }
+  .helicopter .jetIcon { display: none; }
+  .helicopter .heliIcon { display: block !important; }
+  .skyLabel { position: absolute; top: 100%; left: 0; width: 100%; text-align: center;
+    font-size: 2.4vmin; font-weight: 700; color: #fff; text-shadow: 0 1px 4px #000; }
+  #viewBar { position: absolute; bottom: 1.5vmin; left: 1.5vmin; z-index: 6; }
+  #viewBar button { font: inherit; font-size: 2.5vmin; padding: 1vmin 1.8vmin; margin-right: 0.6vmin;
+    border: 1px solid #8fa0bb; border-radius: 2vmin; background: #0b1220; color: #fff; }
+  #mapLink { display: inline-block; font-size: 2.5vmin; padding: 1vmin 1.8vmin; color: #fff; text-decoration: none; }
+  #viewBar button.on { background: #4fc3ff; color: #06101f; }
+  #multiCards { display: none; height: 100%; }
+  #panel.multi #head, #panel.multi #route, #panel.multi #cities, #panel.multi #stats { display: none; }
+  #panel.multi { display: block; }
+  #panel.multi > div:nth-child(2) { display: none; }
+  #panel.multi #multiCards { display: -webkit-flex; display: flex; }
+  .aircraftCard { -webkit-flex: 1; flex: 1; min-width: 0; padding: 1vmin 2vmin; border-left: 1px solid #33415c;
+    font-size: 3vmin; line-height: 1.5; overflow: hidden; }
+  .aircraftCard:first-child { border-left: 0; }
+  .aircraftCard strong { display: block; font-size: 4.3vmin; color: #4fc3ff; }
+  .aircraftCard .cardRoute { font-size: 3.5vmin; font-weight: 600; }
+  #sky.multi #trail { display: none; }
+  #sky.multi .aircraftSprite { width: 16vmin; height: 4.8vmin; }
+  #sky.multi #plane .skyLabel { color: #4fc3ff; }
+  #sky.multi #plane2 .skyLabel, .aircraftCard:nth-child(2) strong { color: #ffcf76; }
+  #sky.multi #plane3 .skyLabel, .aircraftCard:nth-child(3) strong { color: #ceb6ff; }
+  #sky.multi #plane2 .skyLabel { top: auto; bottom: 100%; }
+
 </style>
 </head>
 <body>
@@ -124,14 +173,29 @@
     <div id="ground"></div>
     <div id="clock"></div>
     <div id="trail"></div>
-    <div id="plane">
-      <svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+    <div id="plane" class="aircraftSprite">
+      <svg class="jetIcon" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
         <path d="M22 26 L8 3 L34 3 L56 22 Z" fill="#dfe6f0" stroke="#33415c" stroke-width="1.5" stroke-linejoin="round"/>
         <path d="M78 32 L124 32 L98 54 L68 54 Z" fill="#b9c4d6" stroke="#33415c" stroke-width="1.5" stroke-linejoin="round"/>
         <path d="M10 30 Q10 21 32 20 L150 20 Q186 21 196 30 Q186 39 150 40 L32 40 Q10 39 10 30 Z" fill="#f4f7fb" stroke="#33415c" stroke-width="1.5"/>
         <ellipse cx="112" cy="44" rx="17" ry="6.5" fill="#8d9bb2" stroke="#33415c" stroke-width="1.5"/>
         <path d="M40 28 L150 28" stroke="#33415c" stroke-width="2.4" stroke-dasharray="3 5" fill="none"/>
       </svg>
+      <svg class="heliIcon" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+        <g fill="#f4f7fb" stroke="#33415c" stroke-width="2" stroke-linejoin="round">
+          <path d="M18 28 L100 32 L108 43 L20 35 L8 16 L21 16 Z"/>
+          <path d="M95 24 Q130 15 154 27 Q174 43 148 47 L105 47 Q85 40 95 24 Z"/>
+          <path d="M134 24 Q149 26 155 34 L133 34 Z" fill="#4fc3ff"/>
+          <path d="M121 22 L121 9 M54 8 L184 8 M106 47 L102 55 M145 47 L149 55 M91 55 L163 55" fill="none" stroke="#dfe6f0" stroke-width="3"/>
+        </g>
+      </svg>
+      <span class="skyLabel"></span>
+    </div>
+    <div id="viewBar" role="group" aria-label="Aircraft view">
+      <button type="button" data-view="auto">Auto</button>
+      <button type="button" data-view="single">Single focus</button>
+      <button type="button" data-view="multi">Multi aircraft</button>
+      <a id="mapLink" href="map.html">Map view ↗</a>
     </div>
     <div id="banner"></div>
     <div id="debug"></div>
@@ -145,6 +209,7 @@
       <div class="stat"><div><span class="v" id="vVr">-</span><span class="u" id="uVr"></span></div><div class="l">Vertical</div></div>
       <div class="stat"><div><span class="v" id="vType">-</span></div><div class="l">Aircraft</div></div>
     </div>
+    <div id="multiCards"></div>
     <div id="idleMsg">Watching the sky<small id="idleSub"></small></div>
     <div id="status"></div>
   </div>
@@ -168,7 +233,7 @@
     UNITS: 'metric',       // 'metric' (m, km/h, m/s) or 'aviation' (ft, kt, fpm)
     API_BASES: ['https://api.adsb.lol/v2/point', 'https://api.adsb.one/v2/point'],
     ROUTE_API: 'https://api.adsbdb.com/v0/callsign/',
-    DEMO: false, DEBUG: false
+    VIEW: 'auto', DEMO: false, DEBUG: false
   };
 
   /* ================= pure helpers (unit-tested) ================= */
@@ -227,6 +292,23 @@
     }
     return cur || best;
   }
+
+  // Nearest eligible aircraft, at most three. Uses the same filters as focus mode.
+  function pickMany(list, now, cfg) {
+    var out = [], i, ev;
+    for (i = 0; i < list.length; i++) {
+      ev = evaluate(list[i], now, cfg);
+      if (isCandidate(ev, cfg)) { out.push({ ac: list[i], ev: ev }); }
+    }
+    out.sort(function (a, b) { return a.ev.distNm - b.ev.distNm || (a.ac.hex < b.ac.hex ? -1 : (a.ac.hex > b.ac.hex ? 1 : 0)); });
+    return out.slice(0, 3);
+  }
+
+  // Conservative type-code heuristic, not a complete aircraft-type database.
+  function isHelicopter(type) {
+    return /^(H60|H64|UH1|AH1|R22|R44|R66|B06|B407|B412|B429|EC35|EC45|EC55|AS50|AS55|A109|A139|A169|A189|S76|S92|H135|H145|H160)$/.test(String(type || '').toUpperCase());
+  }
+  function multiView(view, count) { return view === 'multi' || (view === 'auto' && count > 1); }
 
   // +1 = moves to the right on screen, -1 = to the left, as seen looking out the window.
   function spriteDir(track, heading, prev) {
@@ -292,7 +374,7 @@
     return ageSec < 900 && raw.alt_baro > -50 && Math.sqrt(raw._eNm * raw._eNm + raw._nNm * raw._nNm) < 14;
   }
 
-  var api = { normalize: normalize, evaluate: evaluate, isCandidate: isCandidate, pick: pick,
+  var api = { pickMany: pickMany, isHelicopter: isHelicopter, multiView: multiView, normalize: normalize, evaluate: evaluate, isCandidate: isCandidate, pick: pick,
               spriteDir: spriteDir, pitchDeg: pitchDeg, formatStats: formatStats, parseRoute: parseRoute,
               norm180: norm180, norm360: norm360, simRaw: simRaw, simAlive: simAlive, DEMO_PRESETS: DEMO_PRESETS,
               CONFIG: CONFIG };
@@ -310,6 +392,7 @@
   if (qs.fov) { CONFIG.FOV_DEG = parseFloat(qs.fov); }
   if (qs.dist) { CONFIG.MAX_DIST_NM = parseFloat(qs.dist); }
   if (qs.alt) { CONFIG.MAX_ALT_FT = parseFloat(qs.alt); }
+  if (/^(auto|single|multi)$/.test(qs.view || '')) { CONFIG.VIEW = qs.view; }
   if (qs.units) { CONFIG.UNITS = qs.units; }
   // ?api=https://your-relay.workers.dev points live mode at the relay (https only), so the relay address
   // lives in the tablet's bookmark and not in this public file.
@@ -321,6 +404,27 @@
   var aircraft = [], nearbyCount = 0, lastOk = 0, lastErr = '', featured = null, dir = 1;
   var routeCache = {}, routePending = {}, lastSeenLabel = '';
   var skyW = 1, skyH = 1, dots = [], trailPts = [], lastTrail = 0, lastPick = 0, lastText = 0, apiIdx = 0;
+
+  var sprites = [plane], selected = [], showingMulti = false, spriteDirs = {};
+  for (pi = 1; pi < 3; pi++) {
+    var clone = plane.cloneNode(true); clone.id = 'plane' + (pi + 1); sky.appendChild(clone); sprites.push(clone);
+  }
+  var viewButtons = $('viewBar').getElementsByTagName('button');
+  function updateViewButtons() {
+    for (var i = 0; i < viewButtons.length; i++) {
+      var active = viewButtons[i].getAttribute('data-view') === CONFIG.VIEW;
+      viewButtons[i].className = active ? 'on' : '';
+      viewButtons[i].setAttribute('aria-pressed', active ? 'true' : 'false');
+    }
+  }
+  for (pi = 0; pi < viewButtons.length; pi++) {
+    viewButtons[pi].onclick = function (e) {
+      if (e && e.stopPropagation) { e.stopPropagation(); }
+      CONFIG.VIEW = this.getAttribute('data-view'); lastPick = 0; lastText = 0; updateViewButtons();
+    };
+  }
+  updateViewButtons();
+  $('mapLink').href = 'map.html' + location.search;
 
   function dbg(msg) {
     if (!CONFIG.DEBUG) { return; }
@@ -336,7 +440,7 @@
   function setTheme() {
     var h = (new Date()).getHours(), c = 'night';
     if (h >= 8 && h < 17) { c = 'day'; } else if ((h >= 6 && h < 8) || (h >= 17 && h < 20)) { c = 'dusk'; }
-    sky.className = c + (featured ? ' live' : ' idle');
+    sky.className = c + (featured ? ' live' : ' idle') + (showingMulti ? ' multi' : '');
   }
 
   /* ---------- data ---------- */
@@ -463,6 +567,44 @@
     $('vType').textContent = ac.type || '-';
   }
 
+  function cardLine(card, tag, value, cls) {
+    var el = document.createElement(tag); el.className = cls || ''; el.textContent = value; card.appendChild(el);
+  }
+
+  function renderMulti(now) {
+    var box = $('multiCards'); box.textContent = '';
+    for (var i = 0; i < selected.length; i++) {
+      var ac = selected[i].ac, ev = evaluate(ac, now, CONFIG), rt = routeCache[ac.callsign];
+      var stats = formatStats(ev.altFt, ac.gs, ac.vr, CONFIG.UNITS);
+      var card = document.createElement('div'); card.className = 'aircraftCard';
+      cardLine(card, 'strong', ac.callsign || ac.reg || ac.hex);
+      cardLine(card, 'div', (isHelicopter(ac.type) ? 'Helicopter' : ac.type || 'Aircraft'));
+      cardLine(card, 'div', rt && rt.origin && rt.dest ? rt.origin.code + ' → ' + rt.dest.code :
+        (routeCache.hasOwnProperty(ac.callsign) ? 'Route unavailable' : 'Looking up route'), 'cardRoute');
+      cardLine(card, 'div', rt && rt.airline ? rt.airline : '');
+      cardLine(card, 'div', stats.alt + ' ' + stats.altU + ' · ' + stats.spd + ' ' + stats.spdU);
+      cardLine(card, 'div', (stats.vr > 0 ? '+' : '') + stats.vr + ' ' + stats.vrU);
+      box.appendChild(card);
+    }
+  }
+
+  function drawAircraft(f, sprite, now) {
+    var ev = evaluate(f.ac, now, CONFIG), hex = f.ac.hex;
+    var x = (0.5 + ev.rel / CONFIG.FOV_DEG) * skyW;
+    var y = clamp((0.90 - ev.el / CONFIG.EL_MAX_DEG * 0.80), 0.08, 0.90) * skyH;
+    var direction = spriteDir(f.ac.track, CONFIG.WINDOW_HEADING, spriteDirs[hex] || 1);
+    spriteDirs[hex] = direction;
+    sprite.className = 'aircraftSprite visible' + (isHelicopter(f.ac.type) ? ' helicopter' : '');
+    var tf = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) translate(-50%,-50%) rotate(' +
+      (pitchDeg(f.ac.vr, f.ac.gs) * -direction).toFixed(1) + 'deg) scaleX(' + direction + ')';
+    sprite.style.webkitTransform = tf; sprite.style.transform = tf;
+    var label = sprite.querySelector('.skyLabel');
+    label.textContent = showingMulti ? (f.ac.callsign || f.ac.reg || hex) : '';
+    label.style.transform = 'scaleX(' + direction + ')';
+    label.style.webkitTransform = label.style.transform;
+    return { x: x, y: y };
+  }
+
   function renderIdle(now) {
     var ago = lastOk ? Math.round((now - lastOk) / 1000) : -1;
     var sub = nearbyCount + ' aircraft within ' + CONFIG.RADIUS_NM + ' nm';
@@ -490,24 +632,38 @@
     var now = Date.now();
     if (now - lastPick > 500) {
       lastPick = now;
-      var f = pick(aircraft, now, CONFIG, featured ? featured.ac.hex : null);
-      if (f && (!featured || featured.ac.hex !== f.ac.hex)) { trailPts = []; ensureRoute(f.ac.callsign); }
+      var many = pickMany(aircraft, now, CONFIG);
+      var wasMulti = showingMulti;
+      showingMulti = multiView(CONFIG.VIEW, many.length);
+      if (wasMulti !== showingMulti) { trailPts = []; drawTrail(); }
+      var f = showingMulti ? (many[0] || null) : pick(aircraft, now, CONFIG, featured ? featured.ac.hex : null);
+      var previousSelected = selected;
+      selected = showingMulti ? many : (f ? [f] : []);
+      for (var si = 0; si < selected.length; si++) {
+        var alreadySelected = false;
+        for (var sj = 0; sj < previousSelected.length; sj++) {
+          if (previousSelected[sj].ac.hex === selected[si].ac.hex) { alreadySelected = true; }
+        }
+        if (!alreadySelected) { ensureRoute(selected[si].ac.callsign); }
+      }
+      if (f && (!featured || featured.ac.hex !== f.ac.hex)) { trailPts = []; }
       if (featured && !f) { lastSeenLabel = $('callsign').textContent; }
       featured = f; setTheme();
-      panel.className = featured ? '' : 'idle';
+      panel.className = featured ? (showingMulti ? 'multi' : '') : 'idle';
       if (!featured) { renderIdle(now); }
       updateStatus(now);
     }
-    if (featured) {
-      var ev = evaluate(featured.ac, now, CONFIG);
-      var x = (0.5 + ev.rel / CONFIG.FOV_DEG) * skyW;
-      var y = clamp((0.90 - ev.el / CONFIG.EL_MAX_DEG * 0.80), 0.08, 0.90) * skyH;
-      dir = spriteDir(featured.ac.track, CONFIG.WINDOW_HEADING, dir);
-      var pitch = pitchDeg(featured.ac.vr, featured.ac.gs) * -dir;
-      var tf = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) translate(-50%,-50%) rotate(' + pitch.toFixed(1) + 'deg) scaleX(' + dir + ')';
-      plane.style.webkitTransform = tf; plane.style.transform = tf;
-      if (now - lastTrail > 400) { lastTrail = now; trailPts.push({ x: x, y: y }); if (trailPts.length > 16) { trailPts.shift(); } drawTrail(); }
-      if (now - lastText > 500) { lastText = now; renderText(featured, ev); }
+    for (var vi = 0; vi < sprites.length; vi++) {
+      if (vi < selected.length) {
+        var point = drawAircraft(selected[vi], sprites[vi], now);
+        if (vi === 0 && !showingMulti && now - lastTrail > 400) {
+          lastTrail = now; trailPts.push(point); if (trailPts.length > 16) { trailPts.shift(); } drawTrail();
+        }
+      } else { sprites[vi].className = 'aircraftSprite'; }
+    }
+    if (featured && now - lastText > 500) {
+      lastText = now;
+      if (showingMulti) { renderMulti(now); } else { renderText(featured, evaluate(featured.ac, now, CONFIG)); }
     }
     window.requestAnimationFrame(frame);
   }

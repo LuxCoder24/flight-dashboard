@@ -23,3 +23,40 @@ Written by Claude (Sonnet 5.5, Anthropic), directed by Nathan.
 - Header comment only: pointer to the project docs. No code change.
 - Project folder set up: README, AGENTS, LOG, CHANGELOG, docs/FINDINGS, tests.
 - Docs rule added: home coordinates are never stored in files (AGENTS.md rule 11).
+
+## v0.4 (2026-10-19)
+Written by Claude (Sonnet 5.5, Anthropic), directed by Nathan.
+- `index.html`: new `?api=https://...` option points live mode at the relay Worker (https only). Not yet tried against a deployed relay.
+- New `worker/` folder: `worker.js` (the relay, v0.1), `wrangler.jsonc`, `test_worker.mjs` (25 mock checks). Compiles under `wrangler deploy --dry-run`. Never deployed.
+- `tests/dom_test.js`: two new checks for the `?api=` option (36 total).
+- New `docs/RELAY_SETUP.md` (deploy steps for Nathan, with what is verified and what is not).
+- README, AGENTS, FINDINGS and LOG updated.
+
+## Familiarisation, docs and comment only (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- Read the project documentation, page code and relay code, and checked available past-chat titles for relevant context.
+- Recorded the review and verification limits in LOG.md; added the required index.html header entry. No application behaviour changed.
+
+## v0.5 (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- index.html: inline helicopter silhouette for recognised type codes, up to three nearest eligible aircraft with labelled sprites and matching information cards, automatic focus/multi switching, manual view controls and `?view=auto|single|multi`. Single focus remains sticky. ES5, metric defaults and demo mode retained.
+- tests/test_windowjet.js and tests/dom_test.js: selection, classification, automatic/manual mode, three-aircraft cap, cleanup, labels and units checks. Totals: 61 logic and 54 page checks pass.
+- AGENTS.md and README.md: new behaviour, expected counts and current relay handoff. docs/FINDINGS.md: verified checks, heuristic limitations and Drive read failures. LOG.md: full session handoff. index.html header records all changed files through this entry.
+- Restored exact captured project file contents after Drive evicted local files; no unrelated content changes intended. Temporary test tools were installed for verification.
+
+## Post-crash verification, docs and comment only (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- Checked saved project files after the Google Drive crash. App, tests and updated docs are readable; no recovery files remain. docs/RELAY_SETUP.md still times out locally and was not edited.
+- Reran tests: 61 logic, 54 page and 25 relay checks passed, zero failures. ES5 syntax passed. Added this entry, index.html header entry and LOG.md handoff; no application behaviour changes.
+
+## v0.6: separate map edition v0.1 (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- New map.html: single-file ES5 geographic map, selectable viewpoint, heading, width and reach controls defining a forward viewing wedge. Shows all airborne aircraft in the wedge; tap for details. Includes helicopter symbols, demo/live modes, dragging and zoom controls, URL-based zone persistence, stale-fix cleanup and protection from responses for an old zone.
+- index.html: Map view link carries bookmark options. Window edition otherwise unchanged. Header change log updated.
+- New tests/test_map.js (35 checks) and tests/map_dom_test.js (40 checks). tests/dom_test.js adds two map-link checks (56 total); existing 61 window logic and 25 relay checks pass. Both pages pass ES5 syntax checks.
+- README.md and AGENTS.md describe the separate edition, controls, limits and tests. docs/FINDINGS.md records tile-policy sources, verification and limitations. LOG.md records this session. docs/previews/map-wedge-v0.1.png is a desktop screenshot of the demo at the public airport placeholder, captured by GPT-6 (OpenAI), directed by Nathan.
+
+## GitHub Pages publication (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- Prepared map.html, the companion window edition, tests and project documentation for publication to LuxCoder24/flight-dashboard using the connected GitHub tool.
+- index.html header, README.md, AGENTS.md and LOG.md record the deployment handoff. No application behaviour changes. See LOG.md for the verified publication outcome.
