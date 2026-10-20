@@ -1,9 +1,11 @@
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: normal-app suite disables temporary maintenance in its fixture; maintenance_test.js verifies real default.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: fake-clock cooldown and hidden-tab checks.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: setup link shares zone reach.
 // Directed by Nathan | Written by GPT-6 (OpenAI) | 2026-10-19
 // Change log: 2026-10-19 v0.2 GPT-6 (OpenAI), directed by Nathan: persistence and idle drawer lifecycle.
 // Change log: initial map controls, wedge filtering, bookmarks and relay integration checks.
 var fs=require('fs'),JSDOM=require(process.argv[2]).JSDOM,html=fs.readFileSync(process.argv[3]||'map.html','utf8');
+html=html.replace('/* MAINTENANCE_ENABLED */ true','/* MAINTENANCE_ENABLED */ false');
 var passes=0,fails=0;
 function ok(v,n){if(v){passes++;}else{fails++;console.log('FAIL: '+n);}}
 function load(search,feed,storage){

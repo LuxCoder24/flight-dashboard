@@ -1,0 +1,4 @@
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: production maintenance smoke test.
+var fs=require('fs'),JSDOM=require(process.argv[2]).JSDOM,passed=0,failed=0;
+function ok(v,n){if(v){passed++;}else{failed++;console.log('FAIL: '+n);}}
+['index.html','map.html'].forEach(function(path){var requests=0,timers=0,dom=new JSDOM(fs.readFileSync(path,'utf8'),{url:'https://example.github.io/'+path+'?lat=38&lon=-77',runScripts:'dangerously',pretendToBeVisual:true,beforeParse:function(w){w.XMLHttpRequest=function(){requests++;};w.setInterval=function(){timers++;};w.localStorage.setItem('sentinel','keep');}});ok(dom.window.document.querySelector('h1').textContent==='Under maintenance',path+' maintenance visible');ok(requests===0,path+' no feed requests');ok(timers===0,path+' no polling timers');ok(dom.window.localStorage.getItem('sentinel')==='keep',path+' storage preserved');dom.window.close();});console.log(passed+' passed, '+failed+' failed');process.exitCode=failed?1:0;

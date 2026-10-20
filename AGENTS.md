@@ -3,7 +3,7 @@
 This file is tool neutral. Any assistant (Claude, ChatGPT, Gemini, a local model, a coding agent) should be able to continue the project from this file alone, plus `LOG.md` and `docs/FINDINGS.md`.
 
 Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
-Change: v0.9.1 adds shared failure cooldown, pending-request guard and hidden-tab polling pause; prior rules retained.
+Change: v0.10 clears idle trails, uses ADSB.lol listed itineraries and refreshes the display with simple icons; prior rules retained.
 
 ## 1. Read order
 
@@ -14,7 +14,7 @@ Change: v0.9.1 adds shared failure cooldown, pending-request guard and hidden-ta
 
 ## 2. The project in one paragraph
 
-WindowJet is a single-file web page (`index.html`) for a wall-mounted Samsung Galaxy Tab. It shows the aircraft nearest to a window, as seen through that window: a plane sprite is drawn at its true position in the sky (left to right across the window), and below it are the callsign, airline, route, altitude, speed, vertical rate and aircraft type in big type. Nathan wants a clean, large design, not 200 facts. It replicates the idea of the JetClock app/device (jetclock.io). It has demo and live modes, plus a separate geographic map edition (`map.html`) with an adjustable forward viewing wedge. The relay in `worker/` was deployed by Nathan; see the relay sessions in LOG.md for its last known failure and diagnostic handoff. Current production configuration was not inspected during the map session.
+WindowJet is a single-file web page (`index.html`) for a wall-mounted Samsung Galaxy Tab. It shows the aircraft nearest to a window, as seen through that window: a plane sprite is drawn at its true position in the sky (left to right across the window), and below it are the callsign, airline, route, altitude, speed, vertical rate and aircraft type in big type. Nathan wants a clean, large design, not 200 facts. It replicates the idea of the JetClock app/device (jetclock.io). It has demo and live modes, plus a geographic setup map (`map.html`) that configures the main display viewing wedge. The relay in `worker/` was deployed by Nathan; see the relay sessions in LOG.md for its last known failure and diagnostic handoff. Current production configuration was not inspected during the map session.
 
 ## 3. Rules for every contributor (human or LLM)
 
@@ -61,12 +61,13 @@ Pure functions (unit tested):
 | `spriteDir(track, heading, prev)` | +1 moves right on screen, -1 moves left. Looking out a south-facing window, west is on the right, so a westbound plane moves right. Near head-on or tail-on keeps the previous direction. |
 | `pitchDeg(vr, gs)` | Nose tilt for the sprite, exaggerated 1.5 times, clamped to plus or minus 22 degrees. |
 | `formatStats(...)` | Metric or aviation numbers for the panel. |
-| `parseRoute(json)` | Read an adsbdb route response. |
+| `parseRoute(json)` | Legacy adsbdb parser retained for tests; not the current live lookup. |
+| `parseLolRoute(raw)` | Read all airport stops from ADSB.lol standing data; label as a listed itinerary. |
 | `simRaw`, `simAlive`, `DEMO_PRESETS` | Demo simulator. Positions are nautical miles east (`e0`) and north (`n0`) of home. |
 
 Screen mapping: `x = (0.5 + rel / FOV_DEG) * skyWidth`, `y = (0.90 - el / EL_MAX_DEG * 0.80) * skyHeight` (clamped to 8 to 90 percent of the height). The plane is drawn at its true sky position and moves by dead reckoning every animation frame, so it glides between data updates.
 
-Browser side: `poll()` fetches (or in demo mode calls `demoTick()`), `handleList()` normalizes, `frame()` runs every animation frame (re-picks twice a second, updates text twice a second), `ensureRoute()` looks up the route by callsign and caches it (a 404 is cached as "no route"), `buildDemoBar()` makes the demo buttons.
+Browser side: `poll()` fetches (or in demo mode calls `demoTick()`), `handleList()` normalizes, `frame()` runs every animation frame (re-picks twice a second, updates text twice a second), `ensureRoutes()` serializes callsign-only standing-data lookups, caches for 15 minutes and delays errors (a 404 is cached as "no route"), `buildDemoBar()` makes the demo buttons.
 
 Modes: no `lat`/`lon` in the address means demo mode. Giving `lat` and `lon` means live mode. Live mode tries each entry in `API_BASES` in turn, moving to the next after a failure. `?api=https://...` replaces `API_BASES` with the relay (https only), so the relay address lives in the tablet bookmark and not in this public file.
 
@@ -75,8 +76,8 @@ Relay (`worker/worker.js`, a Cloudflare Worker): serves `GET /v2/point/{lat}/{lo
 ## 6. Tests
 
 ```
-node tests/test_windowjet.js index.html          # expect: 71 passed, 0 failed
-node tests/dom_test.js <path-to-jsdom> index.html  # expect: 83 passed, 0 failed
+node tests/test_windowjet.js index.html          # expect: 77 passed, 0 failed
+node tests/dom_test.js <path-to-jsdom> index.html  # expect: 87 passed, 0 failed
 node worker/test_worker.mjs                        # expect: 25 passed, 0 failed (needs nothing installed)
 node tests/test_map.js map.html                     # expect: 55 passed, 0 failed
 node tests/map_dom_test.js <path-to-jsdom> map.html  # expect: 76 passed, 0 failed
@@ -86,7 +87,7 @@ node tests/map_dom_test.js <path-to-jsdom> map.html  # expect: 76 passed, 0 fail
 
 ## 7. Current state and next steps (as of 2026-10-19)
 
-State: v0.9.1 cooldown correction published as c4ee62d541181bd77b2c111b45e5b760ae1672ff; Pages deployment and public HTML source readback succeeded. Upstream recovery remains unverified. Prior v0.9 published as f15b3211683eb016e9dcc393f40ee663b4434b26, with map.html as viewing-zone setup v0.3. GitHub deployment succeeded and both public HTML files served the updated source. Saved map preferences now configure the main display, removing the legacy distance/altitude mismatch for saved zones. Live route matches display Route unverified. Hosted hamburger and Save view controls verified on desktop. `map.html` has a geographic basemap and an editable forward viewing wedge. Its count includes only airborne aircraft in that wedge, at any altitude, without a three-aircraft cap. Both editions use the same relay URL option. Map controls and geometry have 55 logic and 76 page checks; window page checks now total 83. Both editions now use a hamburger for their controls with 15-second idle hiding. Window diagnostics stay in the drawer, and feed errors use a short retry message. The earlier relay 502 cause is unresolved; a later public-browser test with fabricated coordinates succeeded. No Worker deployment occurred during the UI fix. Demo mode supports automatic single/multi view switching, up to three eligible aircraft and helicopter silhouettes. `?view=auto|single|multi` sets the starting choice; Auto is the default. Multi mode shows the three nearest eligible aircraft; single focus retains the current valid aircraft. Hosted at https://luxcoder24.github.io/flight-dashboard/ (window and map editions published 2026-10-19; the public map loaded successfully, and the latest LOG.md records deployment details). Live mode needs a relay because the public plane-position feeds (adsb.lol, adsb.one, adsb.fi, airplanes.live) send no CORS header, so a web page cannot call them (tested 2026-10-19; details in `docs/FINDINGS.md`). The route lookup (adsbdb) does work from a browser. The relay (`worker/`) is written, passes 25 mock tests and compiles under Cloudflare's tool (`wrangler deploy --dry-run`), and was deployed by Nathan, but returned 502 because both feeds failed (relay session in LOG.md). The local diagnostic details update awaits redeployment; why the feeds failed remains UNVERIFIED. Settled: GitHub user `luxcoder24`, repo `flight-dashboard`. Nathan's window coordinates were given in chat on 2026-10-19 and are kept out of the files on purpose (rule 11).
+State: v0.10 prepared: clock trails clear, simple flat aircraft/helicopter icons, refreshed typography and ADSB.lol listed itineraries. The public static UAL2224 route file returned 200 with CORS wildcard and PHX-IAH-DCA; dated active legs remain unverified. Main display uses the validated saved map wedge and reach, no legacy altitude ceiling, 60-second freshness and up to three aircraft. Setup is map.html, reached through the hamburger. Both pages retain failure cooldown and hidden-tab polling pause from v0.9.1 (published c4ee62d541181bd77b2c111b45e5b760ae1672ff). Nathan's screenshot showed adsb.lol 429 and adsb.one 403 inside relay 502; upstream recovery remains unverified. No Worker deployment occurred here. Demo is the default without a location, unless validated saved browser preferences supply live mode; demo=1 always forces simulation. View choices remain Auto, single focus and multi, with at most three aircraft. Hosted at https://luxcoder24.github.io/flight-dashboard/ . Test counts: 77 window logic, 87 window page, 25 relay mocks, 55 map logic and 76 map page, total 320. Check latest LOG.md for publication status. All real location preferences stay in the browser and out of source, docs and logs.
 
 Next steps, in priority order:
 
@@ -126,3 +127,7 @@ Next: <what should happen next>
 2026-10-19 v0.9, GPT-6 (OpenAI), directed by Nathan: map.html is the viewing-zone setup tool. Save the wedge, then use Open display. index.html reads the same local saved record, overriding old bookmark location/heading/reach; useurl=1 remains an explicit bypass and demo=1 stays simulated. Saved zones remove the legacy altitude ceiling, use a padded feed radius capped at 25 nm, and reject fixes older than 60 seconds. Setup links carry zone/reach for browsers with blocked storage. Main display remains Auto/single/multi with up to three aircraft. Live callsign-route matches are shown as Route unverified instead of a confident itinerary; demo routes remain visible.
 
 2026-10-19 v0.9.1, GPT-6 (OpenAI), directed by Nathan: both pages pause position polling while hidden and share a browser-persisted cooldown after failures. Delays grow from 30 seconds to five minutes; a direct or relay-wrapped HTTP 429 starts at least one minute, with a longer readable Retry-After honoured. Successful responses clear cooldown. Normal successful polling remains five seconds. This reduces traffic but does not establish that upstream access has recovered. No Worker deployment or account changes.
+
+2026-10-19 v0.10, GPT-6 (OpenAI), directed by Nathan: idle transitions clear trail data/opacities and CSS hides trails in clock mode. Main display refreshed with simple flat aircraft/helicopter silhouettes, quieter sky, thinner dividers and clearer type. Live routes now read ADSB.lol's public standing-data JSON, preserving every stop and labelling it Listed itinerary; not a verified dated leg. Callsign-only lookup is serialized (at least 15 seconds apart), cached for 15 minutes, 404 cached, errors delay retries 60 seconds and respect the shared feed cooldown. No coordinates sent to the route service.
+
+2026-10-19, GPT-6 (OpenAI), directed by Nathan: TEMPORARY MAINTENANCE enabled in both pages at Nathan's request. Browser initialization and live polling stop; saved preferences stay intact. Resume by changing MAINTENANCE_ENABLED true to false in index.html and map.html. v0.10 changes remain behind the screen. Tests: node tests/maintenance_test.js <path-to-jsdom>, expect 8 passed. Normal DOM suites disable maintenance only in their fixtures.

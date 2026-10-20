@@ -1,3 +1,5 @@
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: normal-app suite disables temporary maintenance in its fixture; maintenance_test.js verifies real default.
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: idle trail cleanup and ADSB.lol listed-route checks.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: cooldown request-count regression.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: verify idle window filter explanation.
 // Directed by: Nathan | Written by: Claude (Sonnet 5.5, Anthropic) | Date: 2026-10-19
@@ -12,6 +14,7 @@ var JSDOM = require(process.argv[2]).JSDOM;
 var fs = require('fs');
 var html = fs.readFileSync(process.argv[3], 'utf8');
 
+html=html.replace('/* MAINTENANCE_ENABLED */ true','/* MAINTENANCE_ENABLED */ false');
 var errors = [];
 var dom = new JSDOM(html, {
   url: 'https://example.github.io/window-jet/?demo=1&debug=1',
@@ -167,6 +170,8 @@ function btn(label) {
   ok(d.getElementById('panel').className === 'idle' && d.querySelectorAll('.aircraftSprite.visible').length === 0, 'auto returns idle and removes old sprites');
   btn('Departure east').click(); await sleep(700);
   ok(d.getElementById('panel').className === '' && d.querySelectorAll('.aircraftSprite.visible').length === 1, 'auto returns to focus after traffic drops to one');
+  await sleep(1100);ok([].some.call(d.querySelectorAll('.dot'),function(dot){return Number(dot.style.opacity)>0;}),'single aircraft creates visible trail before regression check');
+  btn('Clear sky').click();await sleep(700);ok([].every.call(d.querySelectorAll('.dot'),function(dot){return Number(dot.style.opacity)===0;}),'clock return clears every trail dot');
   ok(errors.length === 0, 'no script errors throughout view switching: ' + errors.join(' | '));
   var dom7 = new JSDOM(html, { url: 'https://x.github.io/?demo=1&view=multi&units=aviation', runScripts: 'dangerously', pretendToBeVisual: true });
   await sleep(1100);
@@ -214,15 +219,17 @@ function btn(label) {
 
   // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: saved setup drives the display.
   var shared={version:1,lat:38,lon:-77,heading:180,fov:60,radius:20,zoom:11,mapLat:38,mapLon:-77,units:'metric',demo:false,api:'https://relay.example'}, sharedUrls=[];
-  var sharedDom=new JSDOM(html,{url:'https://x.github.io/?lat=1&lon=1&dist=1&alt=100',runScripts:'dangerously',pretendToBeVisual:true,beforeParse:function(sw){
+  var sharedDom=new JSDOM(html,{url:'https://x.github.io/?lat=1&lon=1&dist=1&alt=100&view=single',runScripts:'dangerously',pretendToBeVisual:true,beforeParse:function(sw){
     sw.localStorage.setItem('windowjet.map.view.v1',JSON.stringify(shared));
-    sw.XMLHttpRequest=function(){this.open=function(method,url){this.url=url;sharedUrls.push(url);};this.send=function(){this.status=200;this.readyState=4;this.responseText=JSON.stringify(this.url.indexOf('/callsign/')!==-1?{response:{flightroute:{origin:{iata_code:'LAS'},destination:{iata_code:'FAT'}}}}:{ac:[{hex:'high',flight:'ZONEHIGH',lat:37.9,lon:-77,alt_baro:22000,gs:0,track:180}]});this.onreadystatechange();};};
+    sw.XMLHttpRequest=function(){this.open=function(method,url){this.url=url;sharedUrls.push(url);};this.send=function(){this.status=200;this.readyState=4;this.responseText=JSON.stringify(this.url.indexOf('vrs-standing-data.adsb.lol')!==-1?{callsign:'ZONEHIGH',airport_codes:'KAAA-KBBB-KCCC',plausible:true,_airports:[{iata:'AAA'},{iata:'BBB'},{iata:'CCC'}]}:{ac:[{hex:'high',flight:'ZONEHIGH',lat:37.9,lon:-77,alt_baro:22000,gs:0,track:180}]});this.onreadystatechange();};};
   }});
   await sleep(1100);
   ok(sharedUrls[0]==='https://relay.example/v2/point/38/-77/12','main display loads saved centre, reach and relay over old bookmark');
   ok(sharedDom.window.document.getElementById('callsign').textContent==='ZONEHIGH','main display includes high aircraft beyond old six-mile limit inside saved zone');
   ok(sharedDom.window.document.getElementById('mapLink').textContent.indexOf('Set up viewing zone')===0,'hamburger presents map as setup');
-  ok(sharedDom.window.document.getElementById('route').textContent==='Route unverified','live route database match is not presented as a confirmed itinerary');
+  ok(sharedDom.window.document.getElementById('route').textContent==='AAA → BBB → CCC','ADSB.lol listed itinerary appears with every stop');
+  ok(sharedDom.window.document.getElementById('cities').textContent==='Listed itinerary · ADSB.lol','route labelled as sourced listed itinerary');
+  ok(sharedUrls.indexOf('https://vrs-standing-data.adsb.lol/routes/ZO/ZONEHIGH.json')!==-1,'listed-route lookup sends only callsign and no viewpoint coordinates');
   sharedDom.window.close();
 
   var probePoll,probeRequest,probeCount=0;

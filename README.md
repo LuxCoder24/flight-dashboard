@@ -2,14 +2,17 @@
 
 A DIY replica of [JetClock](https://jetclock.io) (a live "what plane is above me" display). It runs on a Galaxy Tab mounted on the wall between two windows, and shows the plane flying past as a small animation, with big, clean flight info underneath.
 
+Owner: Nathan. Planes departing DCA (Washington National) fly past his window, which faces about 190 degrees (almost due south).
+
+Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
 Change: v0.9 uses the map to set up the main display viewing zone; saved wedge and reach are shared.
 
-## Status (v0.9.1, zone setup v0.3)
+## Status (v0.10, zone setup v0.3)
 
 | Part | State |
 |---|---|
 | Map edition (`map.html`) | Geographic setup map that selects the main display viewing wedge, demo/live modes and aircraft details. 55 geometry and 76 page checks pass; desktop map preview inspected. |
-| Demo mode (fake planes, button controls) | Works. 83 simulated-browser checks pass; desktop browser preview inspected. Tablet still untested. |
+| Demo mode (fake planes, button controls) | Works. 87 simulated-browser checks pass; desktop browser preview inspected. Tablet still untested. |
 | Live mode (real planes) | Uses the relay below. The map edition has not been tested against real feeds; current deployed configuration was not inspected in this session. See `docs/FINDINGS.md`. |
 | Relay (`worker/`) | Deployed by Nathan but both upstream feeds failed. Local diagnostics update awaits redeployment. 25 mock tests pass in the latest session. Current deployment configuration has not been rechecked. Setup: `docs/RELAY_SETUP.md`. |
 | Route lookup (origin and destination) | Works from a browser (tested 2026-10-19). |
@@ -90,8 +93,8 @@ Use the Auto, Single focus or Multi aircraft buttons to change the choice. `?vie
 | `docs/RELAY_SETUP.md` | Step by step: deploy the relay and point the tablet at it. |
 | `worker/worker.js` | The relay: a small Cloudflare Worker. `worker/wrangler.jsonc` is its config. |
 | `worker/test_worker.mjs` | Tests for the relay with a mocked feed (25 checks, nothing to install). |
-| `tests/test_windowjet.js` | Unit tests for the logic (71 checks). |
-| `tests/dom_test.js` | Runs the page in a simulated browser and clicks every demo button (83 checks). |
+| `tests/test_windowjet.js` | Unit tests for the logic (77 checks). |
+| `tests/dom_test.js` | Runs the page in a simulated browser and clicks every demo button (87 checks). |
 
 ## Running the tests
 
@@ -113,7 +116,7 @@ node tests/map_dom_test.js ~/jsdom-env/node_modules/jsdom map.html
 
 The relay tests need nothing installed: `node worker/test_worker.mjs`.
 
-Expected as of v0.9.1: 71 window logic, 83 window page, 25 relay, 55 map logic and 76 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
+Expected as of v0.10: 77 window logic, 87 window page, 25 relay, 55 map logic and 76 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
 
 ## Hardware and hosting plan
 
@@ -130,3 +133,7 @@ Read `AGENTS.md`. Short version: sign every edit (who directed, who wrote, date)
 2026-10-19 v0.9, GPT-6 (OpenAI), directed by Nathan: map.html is the viewing-zone setup tool. Save the wedge, then use Open display. index.html reads the same local saved record, overriding old bookmark location/heading/reach; useurl=1 remains an explicit bypass and demo=1 stays simulated. Saved zones remove the legacy altitude ceiling, use a padded feed radius capped at 25 nm, and reject fixes older than 60 seconds. Setup links carry zone/reach for browsers with blocked storage. Main display remains Auto/single/multi with up to three aircraft. Live callsign-route matches are shown as Route unverified instead of a confident itinerary; demo routes remain visible.
 
 2026-10-19 v0.9.1, GPT-6 (OpenAI), directed by Nathan: both pages pause position polling while hidden and share a browser-persisted cooldown after failures. Delays grow from 30 seconds to five minutes; a direct or relay-wrapped HTTP 429 starts at least one minute, with a longer readable Retry-After honoured. Successful responses clear cooldown. Normal successful polling remains five seconds. This reduces traffic but does not establish that upstream access has recovered. No Worker deployment or account changes.
+
+2026-10-19 v0.10, GPT-6 (OpenAI), directed by Nathan: idle transitions clear trail data/opacities and CSS hides trails in clock mode. Main display refreshed with simple flat aircraft/helicopter silhouettes, quieter sky, thinner dividers and clearer type. Live routes now read ADSB.lol's public standing-data JSON, preserving every stop and labelling it Listed itinerary; not a verified dated leg. Callsign-only lookup is serialized (at least 15 seconds apart), cached for 15 minutes, 404 cached, errors delay retries 60 seconds and respect the shared feed cooldown. No coordinates sent to the route service.
+
+2026-10-19, GPT-6 (OpenAI), directed by Nathan: TEMPORARY MAINTENANCE enabled in both pages at Nathan's request. Browser initialization and live polling stop; saved preferences stay intact. Resume by changing MAINTENANCE_ENABLED true to false in index.html and map.html. v0.10 changes remain behind the screen. Tests: node tests/maintenance_test.js <path-to-jsdom>, expect 8 passed. Normal DOM suites disable maintenance only in their fixtures.

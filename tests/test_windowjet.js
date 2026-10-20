@@ -168,5 +168,13 @@ ok(A.retryDelay(2,502,'HTTP 429','',1000)===60000,'relay-wrapped 429 waits at le
 ok(A.retryDelay(9,0,'','',1000)===300000,'repeated failure delay capped at five minutes');
 ok(A.retryDelay(1,429,'','600',1000)===600000,'Retry-After seconds can exceed backoff cap');
 ok(A.retryDelay(1,429,'',new Date(901000).toUTCString(),1000)===900000,'Retry-After HTTP date honored');
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: ADSB.lol itinerary parsing.
+var lr={callsign:'TST1',airport_codes:'KAAA-KBBB-KCCC',plausible:true,_airports:[{iata:'AAA',location:'Alpha'},{iata:'BBB',location:'Beta'},{iata:'CCC',location:'Gamma'}]};
+ok(A.parseLolRoute(lr).codes.join('-')==='AAA-BBB-CCC','all listed itinerary stops preserved');
+ok(A.parseLolRoute(lr).source==='ADSB.lol','listed itinerary source retained');
+lr.plausible=false;ok(A.parseLolRoute(lr)===null,'explicitly implausible route omitted');
+lr.plausible=true;lr.airport_codes='unknown';ok(A.parseLolRoute(lr)===null,'unknown route ignored');
+lr.airport_codes='KAAA';lr._airports=[{iata:'AAA'}];ok(A.parseLolRoute(lr)===null,'single airport not treated as route');
+lr._airports=[{iata:'AAA'},{iata:'<script>'}];ok(A.parseLolRoute(lr)===null,'malformed airport code rejected');
 console.log(passes + ' passed, ' + fails + ' failed');
 process.exit(fails ? 1 : 0);

@@ -207,3 +207,19 @@ Verified: 310 checks passed (71 window logic, 83 window page, 25 relay mocks, 55
 Not verified: Upstream recovery, physical tablet behaviour, or server-side cooldown. Worker unchanged.
 Decisions: Refresh old open pages to activate the backoff; do not claim the feed itself is repaired.
 Next: Allow cooldown; if access refusals continue, investigate provider-approved relay access.
+
+## 2026-10-19 23:52 (America/New_York): Clear trails, restore listed routes and simplify the display
+Who: GPT-6 (OpenAI), directed by Nathan
+Did: index.html now clears trail data and opacity at idle/aircraft changes and hides idle trails in CSS. Replaced live adsbdb lookup with ADSB.lol public standing-data JSON; shows full listed itinerary and source, with cached/serialized callsign-only requests. Refreshed sky, typography, dividers and icons; Nathan rejected the detailed drawing and final plane/helicopter icons are simple monochrome silhouettes. tests/test_windowjet.js and tests/dom_test.js add route and trail regressions. Updated README.md, AGENTS.md, CHANGELOG.md and docs/FINDINGS.md. Saved docs/previews/window-refresh-v0.10.png, fake demo only.
+Verified: Final complete run after icon simplification passed 320 checks: 77 window logic, 87 window page, 25 relay mocks, 55 map logic, 76 map page. Both pages parse as ES5. Desktop focus/multi layout inspected. Official static UAL2224 route file returned 200, CORS wildcard and PHX-IAH-DCA. Batch API returned empty 201 and location-aware API returned 500, both recorded without claiming they worked.
+Not verified: Tablet visual support or current dated flight legs. Static itinerary availability does not establish the current flight segment. Position-feed recovery not tested.
+Decisions: Show sourced listed itineraries rather than a blanket unverified message or a false active-leg assertion. Use the public static read interface because the API checks failed. No credentials, home coordinates, Worker changes or access bypass. Keep icons simple per Nathan.
+Next: Publish after final checks, wait for Pages, then tablet refresh.
+
+## 2026-10-19 23:55 (America/New_York): Pause for the night with maintenance screen
+Who: GPT-6 (OpenAI), directed by Nathan
+Did: Nathan asked to stop and show maintenance. Added early-return maintenance screens to index.html and map.html, stopping browser initialization and live requests while preserving saved settings. Added tests/maintenance_test.js and fixture bypasses for normal DOM suites. Updated CHANGELOG.md, README.md and AGENTS.md. The v0.10 work remains behind the maintenance screen. Its attempted publish did not reach a branch update because preview-blob creation did not return the expected result.
+Verified: Maintenance smoke and required suites run before final handover; results reported below.
+Not verified: Tablet display; current dated flight legs or position-feed recovery.
+Decisions: Stop feature work for tonight. Publish maintenance, leave v0.10 changes available to resume tomorrow. No credentials or private coordinates used.
+Next: Tomorrow disable MAINTENANCE_ENABLED in both pages, review v0.10 and resume.

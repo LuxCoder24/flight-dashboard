@@ -102,3 +102,13 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 
 ### v0.9.1 publication notes (2026-10-19, documentation/header only)
 GPT-6 (OpenAI), directed by Nathan: index.html header, AGENTS.md and LOG.md record successful Pages deployment of c4ee62d and updated-source readback for both pages. Application scripts unchanged; no upstream recovery check performed.
+
+## v0.10 (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- index.html clears trail points and rendered opacity when returning to the clock or switching aircraft, with an idle CSS safeguard.
+- Uses public ADSB.lol standing-data JSON instead of the conflicting adsbdb callsign lookup. Shows the complete listed itinerary with a source label rather than blanket Route unverified; no assertion that it is today's active leg. Serialized cached requests send only callsign.
+- Quieter sky/panel styling, restrained mint accents, refined type and simple flat plane/helicopter silhouettes per Nathan's feedback. No libraries, fonts, textures or raster assets added to the application.
+- tests/test_windowjet.js and tests/dom_test.js cover itinerary parsing/rendering and single-flight-to-clock trail cleanup. README.md, AGENTS.md, docs/FINDINGS.md and LOG.md updated. docs/previews/window-refresh-v0.10.png shows the demo display with the final simple icon.
+
+## Temporary maintenance (2026-10-19)
+GPT-6 (OpenAI), directed by Nathan: index.html and map.html show Under maintenance and return before browser initialization, stopping live requests. Saved preferences untouched. Normal DOM suites disable the temporary flag in fixtures; tests/maintenance_test.js checks actual production defaults. README.md, AGENTS.md, LOG.md updated. Resume tomorrow by setting MAINTENANCE_ENABLED false in both pages. v0.10 work remains in source behind maintenance.

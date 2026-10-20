@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 2026-10-19 GPT-6 (OpenAI), directed by Nathan: temporary maintenance mode stops initialization and live requests. -->
 <!-- WindowJet Zone Setup v0.3 | Directed by Nathan | Written by GPT-6 (OpenAI) | 2026-10-19
      CHANGE LOG 2026-10-19 v0.3: GPT-6 (OpenAI), directed by Nathan. Configure the main display zone; links carry reach and saved settings are shared.
      ES5 single-file zone setup. No home coordinates stored here.
@@ -77,6 +78,14 @@ function retryDelay(failures,status,details,retryAfter,now) {
 var api={retryDelay:retryDelay,project:project,unproject:unproject,distance:distance,offset:offset,normalize:normalize,position:position,inZone:inZone,bearing:bearing,destination:destination,helicopter:helicopter,radiusMeters:radiusMeters,query:query,savedOptions:savedOptions};
 if(typeof module!=='undefined'&&module.exports){module.exports=api;}
 if(typeof document==='undefined'){return;}
+
+// TEMPORARY MAINTENANCE: 2026-10-19 GPT-6 (OpenAI), directed by Nathan.
+// Change true to false in both pages when resuming. Saved browser settings are untouched.
+if (/* MAINTENANCE_ENABLED */ true) {
+ document.body.innerHTML='<main role="main" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;background:#09151e;color:#edf5f7;font-family:Arial,sans-serif;padding:24px"><div><p style="font-size:14px;letter-spacing:5px;color:#84d7ce;margin-bottom:24px">WINDOWJET</p><h1 style="font-size:36px;font-weight:400;margin-bottom:16px">Under maintenance</h1><p style="font-size:18px;color:#98afb9;line-height:1.6">Taking a break for tonight.<br>Back tomorrow.</p></div></main>';
+ return;
+}
+
 function $(id){return document.getElementById(id);}
 var STORAGE_KEY='windowjet.map.view.v1',q=query(location.search),restored=false,saved=null,key;
 try{saved=savedOptions(JSON.parse(window.localStorage.getItem(STORAGE_KEY)||'null'));}catch(storageError){/* Browser may block storage. Save reports the fallback. */}

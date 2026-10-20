@@ -8,6 +8,11 @@
   Project docs (same folder): README.md, AGENTS.md (LLMs start here), LOG.md, CHANGELOG.md, docs/FINDINGS.md
 
   CHANGE LOG
+  2026-10-19 GPT-6 (OpenAI), directed by Nathan: temporary maintenance screen,
+              stop browser initialization/live requests until resumed.
+  2026-10-19 v0.10 GPT-6 (OpenAI), directed by Nathan: clear idle trails,
+              ADSB.lol listed itineraries and refreshed display with simple flat aircraft/helicopter icons.
+              Tests, preview and project docs updated.
   2026-10-19 GPT-6 (OpenAI), directed by Nathan: header/docs only, record
               v0.9.1 deployment/readback in AGENTS.md, CHANGELOG.md and LOG.md.
   2026-10-19 v0.9.1 GPT-6 (OpenAI), directed by Nathan: shared feed cooldown,
@@ -204,6 +209,40 @@
   body.windowUiHidden #windowMenuButton { opacity: .35; }
   body.windowUiHidden #windowMenuButton:focus { opacity: 1; }
   #windowMenuButton:focus, #windowMenu button:focus, #windowMenu a:focus { outline: 3px solid #79e2c3; }
+
+  /* 2026-10-19 v0.10 GPT-6 (OpenAI), directed by Nathan: quiet aviation display refresh. */
+  html,body,#panel { background:#09151e; color:#edf5f7; }
+  #sky { background:linear-gradient(180deg,#08131e 0%,#132b3b 100%); }
+  #sky.day { background:linear-gradient(180deg,#478db1 0%,#bbd8e2 100%); }
+  #sky.dusk { background:linear-gradient(180deg,#273648 0%,#ab7a70 100%); }
+  #ground { height:1px; background:rgba(173,208,221,.15); }
+  #sky.idle #trail { display:none; }
+  .dot { width:.55vmin;height:.55vmin;margin:-.275vmin 0 0 -.275vmin;background:#a9d8df; }
+  .aircraftSprite { width:18vmin;height:12vmin; }
+  .aircraftSprite.helicopter { width:20vmin;height:6vmin; }
+  #sky.multi .aircraftSprite { width:12vmin;height:8vmin; }
+  #sky.multi .aircraftSprite.helicopter { width:14vmin;height:4.2vmin; }
+  #clock { font-size:20vmin;font-weight:200;letter-spacing:-.045em;font-variant-numeric:tabular-nums;text-shadow:none; }
+  #panel { border-top:1px solid #243843;padding:2.5vmin 4.5vmin 2vmin; }
+  #callsign { font-size:9.5vmin;letter-spacing:-.035em;font-weight:600; }
+  #airline { font-size:2.8vmin;color:#98afb9; }
+  #route { font-size:6.2vmin;letter-spacing:-.025em; }
+  #route.multiLeg { font-size:4.8vmin; }
+  #route .arrow { color:#84d7ce; }
+  #cities { font-size:2.5vmin;color:#9bb2bc; }
+  .stat { border-top:1px solid #29414c;padding-top:1.2vmin; }
+  .stat .v { font-size:5.5vmin;font-weight:500;letter-spacing:-.04em;font-variant-numeric:tabular-nums; }
+  .stat .l { font-size:1.8vmin;color:#8ca6b1;letter-spacing:.16em; }
+  #chip { background:#18343d;color:#8edbcf;font-size:1.8vmin; }
+  #idleMsg { font-size:3.8vmin;color:#a9bdc6; }
+  #idleMsg small { font-size:2.2vmin;max-width:80vw;color:#7895a3; }
+  .aircraftCard { border-color:#29414c;padding:1vmin 2.2vmin;font-size:2.8vmin;line-height:1.5; }
+  .aircraftCard strong { letter-spacing:-.02em; }
+  .aircraftCard .cardRoute { font-size:3vmin; }
+  .cardSource { font-size:1.8vmin;color:#8ca6b1; }
+  #status { width:.9vmin;height:.9vmin; }
+  #windowMenuButton { border-color:#36505e;background:rgba(9,21,30,.9);border-radius:12px; }
+
 </style>
 </head>
 <body>
@@ -226,20 +265,12 @@
     <div id="clock"></div>
     <div id="trail"></div>
     <div id="plane" class="aircraftSprite">
-      <svg class="jetIcon" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22 26 L8 3 L34 3 L56 22 Z" fill="#dfe6f0" stroke="#33415c" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M78 32 L124 32 L98 54 L68 54 Z" fill="#b9c4d6" stroke="#33415c" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M10 30 Q10 21 32 20 L150 20 Q186 21 196 30 Q186 39 150 40 L32 40 Q10 39 10 30 Z" fill="#f4f7fb" stroke="#33415c" stroke-width="1.5"/>
-        <ellipse cx="112" cy="44" rx="17" ry="6.5" fill="#8d9bb2" stroke="#33415c" stroke-width="1.5"/>
-        <path d="M40 28 L150 28" stroke="#33415c" stroke-width="2.4" stroke-dasharray="3 5" fill="none"/>
+      <svg class="jetIcon" viewBox="0 0 240 160" xmlns="http://www.w3.org/2000/svg" aria-label="Aircraft">
+        <path d="M224 80Q224 74 208 74H151L104 12H82L116 74H57L30 48H16L30 78V82L16 112H30L57 86H116L82 148H104L151 86H208Q224 86 224 80Z" fill="#edf5f7"/>
       </svg>
-      <svg class="heliIcon" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
-        <g fill="#f4f7fb" stroke="#33415c" stroke-width="2" stroke-linejoin="round">
-          <path d="M18 28 L100 32 L108 43 L20 35 L8 16 L21 16 Z"/>
-          <path d="M95 24 Q130 15 154 27 Q174 43 148 47 L105 47 Q85 40 95 24 Z"/>
-          <path d="M134 24 Q149 26 155 34 L133 34 Z" fill="#4fc3ff"/>
-          <path d="M121 22 L121 9 M54 8 L184 8 M106 47 L102 55 M145 47 L149 55 M91 55 L163 55" fill="none" stroke="#dfe6f0" stroke-width="3"/>
-        </g>
+      <svg class="heliIcon" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" aria-label="Helicopter">
+        <path d="M18 23H31L42 32H105Q119 21 141 24Q162 26 169 40Q170 48 154 48H111L99 39L34 34Z" fill="#edf5f7"/>
+        <path d="M130 24V12M85 10H177M118 48V55M151 48V55M105 55H167" fill="none" stroke="#edf5f7" stroke-width="4" stroke-linecap="round"/>
       </svg>
       <span class="skyLabel"></span>
     </div>
@@ -277,7 +308,7 @@
     POLL_MS: 5000,         // normal poll interval; errors trigger a shared cooldown
     UNITS: 'metric',       // 'metric' (m, km/h, m/s) or 'aviation' (ft, kt, fpm)
     API_BASES: ['https://api.adsb.lol/v2/point', 'https://api.adsb.one/v2/point'],
-    ROUTE_API: 'https://api.adsbdb.com/v0/callsign/',
+    ROUTE_API: 'https://vrs-standing-data.adsb.lol/routes/',
     VIEW: 'auto', DEMO: false, DEBUG: false
   };
 
@@ -386,6 +417,17 @@
              vr: Math.round(vrFpm * 0.00508 * 10) / 10, vrU: 'm/s' };
   }
 
+  function parseLolRoute(raw) {
+    if (!raw || raw.airport_codes === 'unknown' || raw.plausible === false || !raw._airports || raw._airports.length < 2) { return null; }
+    var airports = [], codes = [], cities = [], i, a, code;
+    for (i = 0; i < raw._airports.length; i++) {
+      a = raw._airports[i]; code = a && (a.iata || a.icao);
+      if (!code || !/^[A-Z0-9]{3,4}$/.test(code)) { return null; }
+      airports.push({code:code,city:a.location || a.name || ''}); codes.push(code); cities.push(a.location || a.name || code);
+    }
+    return {airline:'',origin:airports[0],dest:airports[airports.length-1],codes:codes,cities:cities,source:'ADSB.lol'};
+  }
+
   function parseRoute(json) {
     var fr = json && json.response && json.response.flightroute;
     if (!fr) { return null; }
@@ -439,12 +481,20 @@ function zoneOptions(v){
  return delay;
 }
 
-  var api = { retryDelay: retryDelay, zoneOptions: zoneOptions, pickMany: pickMany, isHelicopter: isHelicopter, multiView: multiView, normalize: normalize, evaluate: evaluate, isCandidate: isCandidate, pick: pick,
+  var api = { parseLolRoute: parseLolRoute, retryDelay: retryDelay, zoneOptions: zoneOptions, pickMany: pickMany, isHelicopter: isHelicopter, multiView: multiView, normalize: normalize, evaluate: evaluate, isCandidate: isCandidate, pick: pick,
               spriteDir: spriteDir, pitchDeg: pitchDeg, formatStats: formatStats, parseRoute: parseRoute,
               norm180: norm180, norm360: norm360, simRaw: simRaw, simAlive: simAlive, DEMO_PRESETS: DEMO_PRESETS,
               CONFIG: CONFIG };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   if (typeof document === 'undefined') { return; }
+
+// TEMPORARY MAINTENANCE: 2026-10-19 GPT-6 (OpenAI), directed by Nathan.
+// Change true to false in both pages when resuming. Saved browser settings are untouched.
+if (/* MAINTENANCE_ENABLED */ true) {
+ document.body.innerHTML='<main role="main" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;background:#09151e;color:#edf5f7;font-family:Arial,sans-serif;padding:24px"><div><p style="font-size:14px;letter-spacing:5px;color:#84d7ce;margin-bottom:24px">WINDOWJET</p><h1 style="font-size:36px;font-weight:400;margin-bottom:16px">Under maintenance</h1><p style="font-size:18px;color:#98afb9;line-height:1.6">Taking a break for tonight.<br>Back tomorrow.</p></div></main>';
+ return;
+}
+
 
   /* ================= browser app ================= */
   function $(id) { return document.getElementById(id); }
@@ -488,7 +538,7 @@ function feedRecovered(){retryUntil=0;feedFailures=0;try{window.localStorage.rem
   var sky = $('sky'), panel = $('panel'), plane = $('plane'), trailBox = $('trail');
   var aircraft = [], nearbyCount = 0, lastOk = 0, lastErr = '', featured = null, dir = 1;
   var relayDetails = '';
-  var routeCache = {}, routePending = {}, lastSeenLabel = '';
+  var routeCache = {}, routeTimes = {}, routeInFlight = false, routeNext = 0, lastSeenLabel = '';
   var skyW = 1, skyH = 1, dots = [], trailPts = [], lastTrail = 0, lastPick = 0, lastText = 0, apiIdx = 0;
 
   var sprites = [plane], selected = [], showingMulti = false, spriteDirs = {};
@@ -648,15 +698,21 @@ function feedRecovered(){retryUntil=0;feedFailures=0;try{window.localStorage.rem
     });
   }
 
-  function ensureRoute(callsign) {
-    if (!callsign || routeCache.hasOwnProperty(callsign) || routePending[callsign]) { return; }
-    if (CONFIG.DEMO) { if (!routeCache.hasOwnProperty(callsign)) { routeCache[callsign] = null; } return; }
-    routePending[callsign] = true;
-    xhr(CONFIG.ROUTE_API + encodeURIComponent(callsign), function (status, json) {
-      routePending[callsign] = false;
-      if (status === 200) { routeCache[callsign] = parseRoute(json); dbg('route ' + callsign + ': ' + (routeCache[callsign] ? 'found' : 'none')); }
-      else if (status === 404) { routeCache[callsign] = null; }
-      else { dbg('route lookup failed (' + status + ') for ' + callsign); }   // not cached, may retry
+  function ensureRoutes() {
+    var now=Date.now(), callsign='',i,ac;
+    if(CONFIG.DEMO || document.hidden || routeInFlight || now<routeNext || now<readCooldown()){return;}
+    for(i=0;i<selected.length;i++) {
+      ac=selected[i].ac;
+      if(ac.callsign && /^[A-Z0-9]{2,12}$/.test(ac.callsign) && (!routeTimes[ac.callsign] || now-routeTimes[ac.callsign]>900000)) {callsign=ac.callsign;break;}
+    }
+    if(!callsign){return;}routeInFlight=true;routeNext=now+15000;
+    xhr(CONFIG.ROUTE_API+encodeURIComponent(callsign.slice(0,2))+'/'+encodeURIComponent(callsign)+'.json',function(status,json){
+      routeInFlight=false;
+      if(status===200 && json && json.callsign===callsign) {
+        routeCache[callsign]=parseLolRoute(json);routeTimes[callsign]=Date.now();
+      } else if(status===404) {
+        routeCache[callsign]=null;routeTimes[callsign]=Date.now();
+      } else {routeNext=Date.now()+60000;dbg('ADSB.lol listed-route lookup failed ('+status+'); delaying retry');}
     });
   }
 
@@ -668,14 +724,17 @@ function feedRecovered(){retryUntil=0;feedFailures=0;try{window.localStorage.rem
     $('airline').textContent = rt && rt.airline ? rt.airline : '';
     var chip = $('chip');
     chip.textContent = ac.vr > 300 ? 'CLIMBING' : (ac.vr < -300 ? 'DESCENDING' : 'LEVEL');
-    if (rt && rt.origin && rt.dest && CONFIG.DEMO) {
+    if (rt && rt.origin && rt.dest && (CONFIG.DEMO || rt.source === 'ADSB.lol')) {
       $('route').innerHTML = '';
+      $('route').className = rt.codes && rt.codes.length > 2 ? 'multiLeg' : '';
       $('route').appendChild(document.createTextNode(rt.origin.code || '?'));
       var ar = document.createElement('span'); ar.className = 'arrow'; ar.textContent = '→'; $('route').appendChild(ar);
       $('route').appendChild(document.createTextNode(rt.dest.code || '?'));
-      $('cities').textContent = (rt.origin.city || '') + (rt.dest.city ? '  to  ' + rt.dest.city : '');
+      if (rt.codes) { $('route').textContent = rt.codes.join(' → '); }
+      $('cities').textContent = rt.source ? 'Listed itinerary · ADSB.lol' : (rt.origin.city || '') + (rt.dest.city ? '  to  ' + rt.dest.city : '');
     } else {
-      $('route').textContent = rt && !CONFIG.DEMO ? 'Route unverified' : (routeCache.hasOwnProperty(ac.callsign) ? 'Route unavailable' : '');
+      $('route').className='';
+      $('route').textContent = rt && !CONFIG.DEMO ? 'Route unverified' : (routeCache.hasOwnProperty(ac.callsign) ? 'Route unavailable' : (CONFIG.DEMO ? '' : 'Looking up route'));
       $('cities').textContent = '';
     }
     $('vAlt').textContent = s.alt; $('uAlt').textContent = s.altU;
@@ -696,9 +755,9 @@ function feedRecovered(){retryUntil=0;feedFailures=0;try{window.localStorage.rem
       var card = document.createElement('div'); card.className = 'aircraftCard';
       cardLine(card, 'strong', ac.callsign || ac.reg || ac.hex);
       cardLine(card, 'div', (isHelicopter(ac.type) ? 'Helicopter' : ac.type || 'Aircraft'));
-      cardLine(card, 'div', rt && rt.origin && rt.dest ? (CONFIG.DEMO ? rt.origin.code + ' → ' + rt.dest.code : 'Route unverified') :
+      cardLine(card, 'div', rt && rt.origin && rt.dest ? (rt.codes ? rt.codes.join(' → ') : (CONFIG.DEMO ? rt.origin.code + ' → ' + rt.dest.code : 'Route unverified')) :
         (routeCache.hasOwnProperty(ac.callsign) ? 'Route unavailable' : 'Looking up route'), 'cardRoute');
-      cardLine(card, 'div', rt && rt.airline ? rt.airline : '');
+      cardLine(card, 'div', rt && rt.source ? 'Listed itinerary · ADSB.lol' : (rt && rt.airline ? rt.airline : ''), 'cardSource');
       cardLine(card, 'div', stats.alt + ' ' + stats.altU + ' · ' + stats.spd + ' ' + stats.spdU);
       cardLine(card, 'div', (stats.vr > 0 ? '+' : '') + stats.vr + ' ' + stats.vrU);
       box.appendChild(card);
@@ -760,16 +819,9 @@ function feedRecovered(){retryUntil=0;feedFailures=0;try{window.localStorage.rem
       showingMulti = multiView(CONFIG.VIEW, many.length);
       if (wasMulti !== showingMulti) { trailPts = []; drawTrail(); }
       var f = showingMulti ? (many[0] || null) : pick(aircraft, now, CONFIG, featured ? featured.ac.hex : null);
-      var previousSelected = selected;
       selected = showingMulti ? many : (f ? [f] : []);
-      for (var si = 0; si < selected.length; si++) {
-        var alreadySelected = false;
-        for (var sj = 0; sj < previousSelected.length; sj++) {
-          if (previousSelected[sj].ac.hex === selected[si].ac.hex) { alreadySelected = true; }
-        }
-        if (!alreadySelected) { ensureRoute(selected[si].ac.callsign); }
-      }
-      if (f && (!featured || featured.ac.hex !== f.ac.hex)) { trailPts = []; }
+      ensureRoutes();
+      if (!f || !featured || featured.ac.hex !== f.ac.hex) { trailPts = []; drawTrail(); }
       if (featured && !f) { lastSeenLabel = $('callsign').textContent; }
       featured = f; setTheme();
       panel.className = featured ? (showingMulti ? 'multi' : '') : 'idle';
