@@ -27,6 +27,10 @@
               (CORS), so live data needs a relay that has not been built yet.
   2026-10-19  v0.3.1  Claude, directed by Nathan
               Header comment only: added a pointer to the project docs. No code change.
+  2026-10-19  v0.4  Claude, directed by Nathan
+              New URL option ?api=https://... : points live mode at the relay Worker (worker/worker.js),
+              replacing the built-in feed list. https only. Needed because the public feeds block
+              browsers (CORS). Not yet tried against a real deployed relay.
 
   NOT VERIFIED AGAINST LIVE DATA (the build sandbox could not reach the APIs):
    - exact JSON field names returned by api.adsb.lol (written from the documented
@@ -38,6 +42,7 @@
 
   URL options: ?demo=1  ?debug=1  ?lat=..&lon=..  ?heading=190  ?fov=140
                ?dist=6 (max nautical miles)  ?alt=12000 (max feet)  ?units=aviation
+               ?api=https://your-relay.workers.dev (live data relay)
 -->
 <html lang="en">
 <head>
@@ -306,6 +311,9 @@
   if (qs.dist) { CONFIG.MAX_DIST_NM = parseFloat(qs.dist); }
   if (qs.alt) { CONFIG.MAX_ALT_FT = parseFloat(qs.alt); }
   if (qs.units) { CONFIG.UNITS = qs.units; }
+  // ?api=https://your-relay.workers.dev points live mode at the relay (https only), so the relay address
+  // lives in the tablet's bookmark and not in this public file.
+  if (qs.api && /^https:\/\//.test(qs.api)) { CONFIG.API_BASES = [qs.api.replace(/\/+$/, '') + '/v2/point']; }
   // No coordinates given means demo mode (fake planes), so the page works the moment it is opened.
   CONFIG.DEMO = qs.demo === '1' || !CONFIG.HOME_SET; CONFIG.DEBUG = qs.debug === '1';
 
