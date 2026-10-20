@@ -219,7 +219,7 @@ Next: Publish after final checks, wait for Pages, then tablet refresh.
 ## 2026-10-19 23:55 (America/New_York): Pause for the night with maintenance screen
 Who: GPT-6 (OpenAI), directed by Nathan
 Did: Nathan asked to stop and show maintenance. Added early-return maintenance screens to index.html and map.html, stopping browser initialization and live requests while preserving saved settings. Added tests/maintenance_test.js and fixture bypasses for normal DOM suites. Updated CHANGELOG.md, README.md and AGENTS.md. The v0.10 work remains behind the maintenance screen. Its attempted publish did not reach a branch update because preview-blob creation did not return the expected result.
-Verified: Maintenance smoke and required suites run before final handover; results reported below.
+Verified: 328 checks passed: 8 production-maintenance smoke, 77 window logic, 87 window page, 25 relay mocks, 55 map logic and 76 map page. Source published as cf9146b1226bef82f7caad828b8cdf308396f9b1; Pages run 39366884484 is being checked.
 Not verified: Tablet display; current dated flight legs or position-feed recovery.
 Decisions: Stop feature work for tonight. Publish maintenance, leave v0.10 changes available to resume tomorrow. No credentials or private coordinates used.
 Next: Tomorrow disable MAINTENANCE_ENABLED in both pages, review v0.10 and resume.

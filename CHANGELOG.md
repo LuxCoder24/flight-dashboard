@@ -112,3 +112,5 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 
 ## Temporary maintenance (2026-10-19)
 GPT-6 (OpenAI), directed by Nathan: index.html and map.html show Under maintenance and return before browser initialization, stopping live requests. Saved preferences untouched. Normal DOM suites disable the temporary flag in fixtures; tests/maintenance_test.js checks actual production defaults. README.md, AGENTS.md, LOG.md updated. Resume tomorrow by setting MAINTENANCE_ENABLED false in both pages. v0.10 work remains in source behind maintenance.
+
+2026-10-19, GPT-6 (OpenAI), directed by Nathan: documentation/header-only update to index.html, AGENTS.md and LOG.md records maintenance publication cf9146b and 328 passing checks. Application scripts unchanged.
