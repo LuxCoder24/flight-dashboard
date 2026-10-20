@@ -99,3 +99,6 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 - index.html and map.html share a coordinate-free browser cooldown after feed errors, pause live polling in hidden tabs, and show retry countdowns. The window display prevents overlapping position requests.
 - Backoff starts at 30 seconds and doubles up to five minutes. Direct or relay-reported HTTP 429 waits at least one minute. A longer readable Retry-After is honoured. Success clears cooldown; refresh and zone changes do not bypass an active stored cooldown.
 - tests/test_windowjet.js, tests/test_map.js, tests/dom_test.js and tests/map_dom_test.js cover delay calculation, cooldown traffic suppression, recovery and hidden-map polling. Updated AGENTS.md, README.md, docs/FINDINGS.md and LOG.md. Worker code unchanged.
+
+### v0.9.1 publication notes (2026-10-19, documentation/header only)
+GPT-6 (OpenAI), directed by Nathan: index.html header, AGENTS.md and LOG.md record successful Pages deployment of c4ee62d and updated-source readback for both pages. Application scripts unchanged; no upstream recovery check performed.

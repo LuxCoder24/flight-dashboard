@@ -199,3 +199,11 @@ Verified: 310 checks passed: 71 window logic, 83 window page, 55 map logic, 76 m
 Not verified: Upstream recovery, cause/scope/duration of rate limiting, the backup's 403 reason, or tablet behaviour. Current Worker does not forward upstream Retry-After; the browser honours that header only when readable in its own response.
 Decisions: Exponential failure delays start at 30 seconds and cap at five minutes; 429, including relay detail text, waits at least one minute. A longer readable Retry-After wins. Success clears cooldown. Preserve normal five-second successful polls. Do not change identity, bypass access controls, rotate infrastructure or claim access restored. No Worker deployment or credential handling. Old pages/devices may still send requests until updated.
 Next: Publish the correction after final checks; refresh open display/setup pages and allow the cooldown. If refusals persist, provider-approved relay access or a supported data source remains necessary.
+
+## 2026-10-19 23:40 (America/New_York): Cooldown release published
+Who: GPT-6 (OpenAI), directed by Nathan
+Did: Published c4ee62d541181bd77b2c111b45e5b760ae1672ff. GitHub Pages run 39365441797 completed successfully; public index.html and map.html returned HTTP 200 and contained the new cooldown helper/key. Updated index.html header, AGENTS.md and CHANGELOG.md with documentation-only publication notes.
+Verified: 310 checks passed (71 window logic, 83 window page, 25 relay mocks, 55 map logic, 76 map page); ES5 parsing passed for both pages. Static public source readback only, without opening pages that poll live aircraft feeds.
+Not verified: Upstream recovery, physical tablet behaviour, or server-side cooldown. Worker unchanged.
+Decisions: Refresh old open pages to activate the backoff; do not claim the feed itself is repaired.
+Next: Allow cooldown; if access refusals continue, investigate provider-approved relay access.
