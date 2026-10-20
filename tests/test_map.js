@@ -63,4 +63,11 @@ view.units='aviation';view.radius=24;view.demo=true;view.api='';
 ok(A.savedOptions(view).units==='aviation'&&A.savedOptions(view).demo==='1','aviation demo without relay supported');
 view.radius=25;ok(A.savedOptions(view)===null,'saved aviation reach respects relay margin');
 
+
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: retry scheduling.
+ok(A.retryDelay(1,502,'','',1000)===30000,'first failure waits thirty seconds');
+ok(A.retryDelay(2,502,'HTTP 429','',1000)===60000,'relay-wrapped 429 waits at least one minute');
+ok(A.retryDelay(9,0,'','',1000)===300000,'repeated failure delay capped at five minutes');
+ok(A.retryDelay(1,429,'','600',1000)===600000,'Retry-After seconds can exceed backoff cap');
+ok(A.retryDelay(1,429,'',new Date(901000).toUTCString(),1000)===900000,'Retry-After HTTP date honored');
 console.log(passes+' passed, '+fails+' failed');process.exitCode=fails?1:0;

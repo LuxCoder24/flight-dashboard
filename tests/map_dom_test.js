@@ -1,3 +1,4 @@
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: fake-clock cooldown and hidden-tab checks.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: setup link shares zone reach.
 // Directed by Nathan | Written by GPT-6 (OpenAI) | 2026-10-19
 // Change log: 2026-10-19 v0.2 GPT-6 (OpenAI), directed by Nathan: persistence and idle drawer lifecycle.
@@ -6,8 +7,9 @@ var fs=require('fs'),JSDOM=require(process.argv[2]).JSDOM,html=fs.readFileSync(p
 var passes=0,fails=0;
 function ok(v,n){if(v){passes++;}else{fails++;console.log('FAIL: '+n);}}
 function load(search,feed,storage){
- var errors=[],urls=[],timers=[],timeouts={},nextTimer=0;
+ var errors=[],urls=[],timers=[],timeouts={},nextTimer=0,clockOffset=0;
  var dom=new JSDOM(html,{url:'https://example.github.io/flight-dashboard/map.html?tiles=0&'+search,runScripts:'dangerously',pretendToBeVisual:true,beforeParse:function(w){
+  var actualNow=w.Date.now;w.Date.now=function(){return actualNow()+clockOffset;};
   w.addEventListener('error',function(e){errors.push(e.message);});
   w.setInterval=function(fn){timers.push(fn);return timers.length;};
   w.setTimeout=function(fn,ms){timeouts[++nextTimer]={fn:fn,ms:ms};return nextTimer;};
@@ -16,7 +18,7 @@ function load(search,feed,storage){
   else if(storage&&typeof storage.raw==='string'){w.localStorage.setItem('windowjet.map.view.v1',storage.raw);}
   w.XMLHttpRequest=function(){this.open=function(m,url){urls.push(url);};this.send=function(){this.status=feed&&feed.status||200;this.readyState=4;this.responseText=JSON.stringify(feed&&feed.body||{ac:[]});this.onreadystatechange();};};
  }});
- return {w:dom.window,d:dom.window.document,errors:errors,urls:urls,tick:function(){timers.forEach(function(fn){fn();});},idle:function(){Object.keys(timeouts).forEach(function(id){var t=timeouts[id];if(t&&t.ms===15000){delete timeouts[id];t.fn();}});},close:function(){dom.window.close();}};
+ return {w:dom.window,d:dom.window.document,errors:errors,urls:urls,advance:function(ms){clockOffset+=ms;},tick:function(){timers.forEach(function(fn){fn();});},idle:function(){Object.keys(timeouts).forEach(function(id){var t=timeouts[id];if(t&&t.ms===15000){delete timeouts[id];t.fn();}});},close:function(){dom.window.close();}};
 }
 function el(s,id){return s.d.getElementById(id);}
 function change(s,id,value){el(s,id).value=String(value);el(s,id).dispatchEvent(new s.w.Event('input',{bubbles:true}));el(s,id).dispatchEvent(new s.w.Event('change',{bubbles:true}));}
@@ -65,4 +67,12 @@ s=load('',null,{raw:JSON.stringify({version:1,heading:210})});ok(s.errors.length
 s=load('',null,{blocked:true});el(s,'saveZone').click();ok(s.errors.length===0&&/Bookmark/.test(el(s,'saveStatus').textContent),'blocked storage offers bookmark fallback without crashing');ok(el(s,'saveZone').textContent==='Saved in link','fallback does not claim browser persistence');s.close();
 s=load('',{body:{ac:[]}},{raw:stored});el(s,'forgetView').click();ok(s.w.localStorage.getItem('windowjet.map.view.v1')===null,'saved preference removal works');ok(/forgotten/.test(el(s,'saveStatus').textContent),'forget confirmation');s.close();
 
+// Rate-limit responses are simulated, never requested from the feed.
+s=load('lat=38&lon=-77&api=https://relay.example',{status:502,body:{details:['adsb.lol: HTTP 429','adsb.one: HTTP 403']}});
+s.tick();s.tick();ok(s.urls.length===1,'map does not poll during wrapped rate-limit cooldown');
+ok(/Retrying in/.test(el(s,'feedStatus').textContent),'map explains cooldown countdown');
+change(s,'heading',90);ok(s.urls.length===1,'changing wedge does not bypass feed cooldown');
+s.advance(61000);s.tick();ok(s.urls.length===2,'map retries after cooldown expires');
+s.close();
+s=load('lat=38&lon=-77',{body:{ac:[]}});Object.defineProperty(s.d,'hidden',{value:true,configurable:true});s.tick();ok(s.urls.length===1,'hidden setup tab stops live polling');s.close();
 console.log(passes+' passed, '+fails+' failed');process.exitCode=fails?1:0;

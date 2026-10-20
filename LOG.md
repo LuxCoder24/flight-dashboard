@@ -191,3 +191,11 @@ Verified: 290 checks passed: 66 window logic, 78 window page, 25 relay mocks, 50
 Not verified: Real tablet display, historical flight routes, or exact simultaneous flight-feed agreement.
 Decisions: Setup saves the selection rules for the main display. Up to three matching aircraft appear there. No changes to the Worker or user credentials.
 Next: Refresh the tablet, open Set up viewing zone, save the desired wedge, then Open display.
+
+## 2026-10-19 23:38 (America/New_York): Respond to confirmed feed rate limiting
+Who: GPT-6 (OpenAI), directed by Nathan
+Did: Read Nathan's screenshot showing relay 502 with adsb.lol 429 and adsb.one 403 every five seconds. index.html and map.html now share a coordinate-free persisted cooldown across reloads/settings changes, pause position polling while hidden, and display countdowns. Window polling now has an in-flight guard. Added pure delay tests and simulated-page request-count, recovery, settings-change and hidden-tab checks. Updated README.md, AGENTS.md, CHANGELOG.md and docs/FINDINGS.md.
+Verified: 310 checks passed: 71 window logic, 83 window page, 55 map logic, 76 map page and 25 relay mocks, including overlap and hidden-page checks. Both pages parse as ES5. No live aircraft-feed requests sent during this session.
+Not verified: Upstream recovery, cause/scope/duration of rate limiting, the backup's 403 reason, or tablet behaviour. Current Worker does not forward upstream Retry-After; the browser honours that header only when readable in its own response.
+Decisions: Exponential failure delays start at 30 seconds and cap at five minutes; 429, including relay detail text, waits at least one minute. A longer readable Retry-After wins. Success clears cooldown. Preserve normal five-second successful polls. Do not change identity, bypass access controls, rotate infrastructure or claim access restored. No Worker deployment or credential handling. Old pages/devices may still send requests until updated.
+Next: Publish the correction after final checks; refresh open display/setup pages and allow the cooldown. If refusals persist, provider-approved relay access or a supported data source remains necessary.

@@ -161,5 +161,12 @@ var zcfg={HOME_LAT:38,HOME_LON:-77,WINDOW_HEADING:180,FOV_DEG:60,MAX_DIST_NM:12,
 var za=mk(0,-9,22000);ok(A.pick([za],now,zcfg,null)!==null,'saved zone admits distant high aircraft');
 za._t=now-61000;ok(A.pick([za],now,zcfg,null)===null&&A.pickMany([za],now,zcfg).length===0,'saved zone excludes stale fixes in both modes');
 
+
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: retry scheduling.
+ok(A.retryDelay(1,502,'','',1000)===30000,'first failure waits thirty seconds');
+ok(A.retryDelay(2,502,'HTTP 429','',1000)===60000,'relay-wrapped 429 waits at least one minute');
+ok(A.retryDelay(9,0,'','',1000)===300000,'repeated failure delay capped at five minutes');
+ok(A.retryDelay(1,429,'','600',1000)===600000,'Retry-After seconds can exceed backoff cap');
+ok(A.retryDelay(1,429,'',new Date(901000).toUTCString(),1000)===900000,'Retry-After HTTP date honored');
 console.log(passes + ' passed, ' + fails + ' failed');
 process.exit(fails ? 1 : 0);

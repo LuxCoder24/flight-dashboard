@@ -8,6 +8,9 @@
   Project docs (same folder): README.md, AGENTS.md (LLMs start here), LOG.md, CHANGELOG.md, docs/FINDINGS.md
 
   CHANGE LOG
+  2026-10-19 v0.9.1 GPT-6 (OpenAI), directed by Nathan: shared feed cooldown,
+              bounded pending requests, hidden-tab pause and retry countdown in both pages.
+              Tests and project docs updated; no Worker deployment.
   2026-10-19 GPT-6 (OpenAI), directed by Nathan: documentation/header only,
               record v0.9 publication checks in AGENTS.md, CHANGELOG.md and LOG.md.
   2026-10-19 v0.9 GPT-6 (OpenAI), directed by Nathan: map becomes zone setup;
@@ -269,7 +272,7 @@
     MAX_ALT_FT: 12000,     // ignore aircraft higher than this (feet)
     EL_MAX_DEG: 25,        // elevation angle that maps to the top of the sky area
     RADIUS_NM: 10,         // how far the API is asked to search
-    POLL_MS: 5000,         // API poll interval (the APIs I read about allow 1 request per second)
+    POLL_MS: 5000,         // normal poll interval; errors trigger a shared cooldown
     UNITS: 'metric',       // 'metric' (m, km/h, m/s) or 'aviation' (ft, kt, fpm)
     API_BASES: ['https://api.adsb.lol/v2/point', 'https://api.adsb.one/v2/point'],
     ROUTE_API: 'https://api.adsbdb.com/v0/callsign/',
@@ -426,7 +429,15 @@ function zoneOptions(v){
  if(!v||v.version!==1||!isNum(v.lat)||Math.abs(v.lat)>85.05112878||!isNum(v.lon)||Math.abs(v.lon)>180||!isNum(v.heading)||v.heading<0||v.heading>=360||!isNum(v.fov)||v.fov<20||v.fov>180||!isNum(v.radius)||v.radius<1||v.radius>(v.units==='aviation'?24:44)||!isNum(v.zoom)||v.zoom<3||v.zoom>17||v.zoom%1!==0||!isNum(v.mapLat)||Math.abs(v.mapLat)>85.05112878||!isNum(v.mapLon)||Math.abs(v.mapLon)>180||(v.units!=='metric'&&v.units!=='aviation')||typeof v.demo!=='boolean'||typeof v.api!=='string'||(v.api&&!/^https:\/\//.test(v.api))){return null;}
  return {zone:'1',dist:String(v.radius*(v.units==='aviation'?1:1000/1852)),lat:String(v.lat),lon:String(v.lon),heading:String(v.heading),fov:String(v.fov),radius:String(v.radius),zoom:String(v.zoom),maplat:String(v.mapLat),maplon:String(v.mapLon),units:v.units,demo:v.demo?'1':'0',api:v.api};
 }
-  var api = { zoneOptions: zoneOptions, pickMany: pickMany, isHelicopter: isHelicopter, multiView: multiView, normalize: normalize, evaluate: evaluate, isCandidate: isCandidate, pick: pick,
+  function retryDelay(failures,status,details,retryAfter,now) {
+ var delay=Math.min(300000,30000*Math.pow(2,Math.min(Math.max(failures-1,0),4))),value=String(retryAfter||''),seconds,date;
+ if(status===429||/HTTP 429/.test(String(details||''))){delay=Math.max(delay,60000);}
+ if(/^\d+$/.test(value)){seconds=Number(value);if(isFinite(seconds)){delay=Math.max(delay,seconds*1000);}}
+ else if(value){date=Date.parse(value);if(isFinite(date)){delay=Math.max(delay,date-now);}}
+ return delay;
+}
+
+  var api = { retryDelay: retryDelay, zoneOptions: zoneOptions, pickMany: pickMany, isHelicopter: isHelicopter, multiView: multiView, normalize: normalize, evaluate: evaluate, isCandidate: isCandidate, pick: pick,
               spriteDir: spriteDir, pitchDeg: pitchDeg, formatStats: formatStats, parseRoute: parseRoute,
               norm180: norm180, norm360: norm360, simRaw: simRaw, simAlive: simAlive, DEMO_PRESETS: DEMO_PRESETS,
               CONFIG: CONFIG };
@@ -466,6 +477,12 @@ function zoneOptions(v){
   window.addEventListener('focus', checkZoneChange);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { checkZoneChange(); } });
 
+  var retryKey='windowjet.feed.retry.v1',retryUntil=0,feedFailures=0;
+function readCooldown(){try{var v=JSON.parse(window.localStorage.getItem(retryKey)||'null');if(v&&typeof v.until==='number'&&isFinite(v.until)&&v.until>retryUntil){retryUntil=v.until;feedFailures=typeof v.failures==='number'&&isFinite(v.failures)?Math.max(0,Math.min(20,v.failures)):0;}}catch(e){}return retryUntil;}
+function feedFailed(status,details,request){var header='';try{header=request&&request.getResponseHeader?request.getResponseHeader('Retry-After'):'';}catch(e){}readCooldown();feedFailures++;retryUntil=Math.max(retryUntil,Date.now()+retryDelay(feedFailures,status,details,header,Date.now()));try{window.localStorage.setItem(retryKey,JSON.stringify({until:retryUntil,failures:feedFailures}));}catch(e){}}
+function feedRecovered(){retryUntil=0;feedFailures=0;try{window.localStorage.removeItem(retryKey);}catch(e){}}
+
+  var feedPending=false;
   var sky = $('sky'), panel = $('panel'), plane = $('plane'), trailBox = $('trail');
   var aircraft = [], nearbyCount = 0, lastOk = 0, lastErr = '', featured = null, dir = 1;
   var relayDetails = '';
@@ -543,7 +560,7 @@ function zoneOptions(v){
       if (r.readyState !== 4 || done) { return; }
       done = true;
       var j = null; try { j = JSON.parse(r.responseText); } catch (e) { j = null; }
-      cb(r.status, j);
+      cb(r.status, j, r);
     };
     r.ontimeout = function () { if (!done) { done = true; cb(0, null); } };
     r.onerror = function () { if (!done) { done = true; cb(0, null); } };
@@ -610,14 +627,19 @@ function zoneOptions(v){
 
   function poll() {
     if (CONFIG.DEMO) { handleList(demoTick()); return; }
+    if (document.hidden || feedPending) { return; }
+    if (Date.now() < readCooldown()) { if (!lastErr) { lastErr='Feed cooling down after an earlier failure'; } return; }
+    feedPending=true;
     var url = CONFIG.API_BASES[apiIdx % CONFIG.API_BASES.length] + '/' + CONFIG.HOME_LAT + '/' + CONFIG.HOME_LON + '/' + CONFIG.RADIUS_NM;
-    xhr(url, function (status, json) {
+    xhr(url, function (status, json, request) {
+      feedPending=false;
       if (status === 200 && json) {
         var list = json.ac || json.aircraft || [];
-        handleList(list);
+        feedRecovered(); handleList(list);
       } else {
         lastErr = 'HTTP ' + status + ' from ' + CONFIG.API_BASES[apiIdx % CONFIG.API_BASES.length];
         relayDetails = json && json.details && typeof json.details.join === 'function' ? json.details.join('; ') : '';
+        feedFailed(status,relayDetails,request);
         dbg('fail: ' + lastErr + (relayDetails ? ' | ' + relayDetails : ''));
         apiIdx++;   // try the next provider on the next poll
       }
@@ -705,12 +727,13 @@ function zoneOptions(v){
        Math.round(CONFIG.MAX_DIST_NM * 1.852 * 10) / 10 + ' km, ' + Math.round(CONFIG.MAX_ALT_FT * 0.3048) + ' m') +
       ', heading ' + CONFIG.WINDOW_HEADING + '°, field of view ' + CONFIG.FOV_DEG + '°';
     if (CONFIG.ZONE) { sub = nearbyCount + ' airborne nearby; none inside your saved viewing zone'; }
-    if (lastErr) { sub = 'Live feed unavailable. Retrying…'; }
+    if (lastErr) { sub = 'Live feed unavailable. Retrying in ' + Math.max(0,Math.ceil((readCooldown()-now)/1000)) + ' s…'; }
     $('idleSub').textContent = (lastSeenLabel ? 'Last seen: ' + lastSeenLabel + '  |  ' : '') + sub;
   }
 
   function updateStatus(now) {
     $('feedInfo').textContent = CONFIG.DEMO ? 'Demo aircraft' : (lastErr ? lastErr + (relayDetails ? ' | ' + relayDetails : '') : (lastOk ? 'Live feed connected' : 'Connecting to live feed…'));
+    if (lastErr && retryUntil > now) { $('feedInfo').textContent += ' | Next retry in ' + Math.ceil((retryUntil-now)/1000) + ' s'; }
     var st = $('status');
     st.className = lastErr && (!lastOk || now - lastOk > 20000) ? 'err' : (lastOk && now - lastOk < 20000 ? 'ok' : 'stale');
   }

@@ -1,3 +1,4 @@
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: cooldown request-count regression.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: verify idle window filter explanation.
 // Directed by: Nathan | Written by: Claude (Sonnet 5.5, Anthropic) | Date: 2026-10-19
 // Change log: 2026-10-19 v0.3.1 Claude, directed by Nathan: copied into the project folder, header added. Logic unchanged.
@@ -174,13 +175,14 @@ function btn(label) {
   dom7.window.close();
 
   // 14. Window-edition idle controls and relay diagnostics, without real network access.
-  var windowIdle, windowPoll, replyStatus=502, replyBody={error:'all upstream feeds failed',details:['adsb.lol: HTTP 403','adsb.one: HTTP 403']};
+  var windowClockOffset=0,windowRequests=0,windowIdle, windowPoll, replyStatus=502, replyBody={error:'all upstream feeds failed',details:['adsb.lol: HTTP 403','adsb.one: HTTP 403']};
   var dom8=new JSDOM(html,{url:'https://x.github.io/?lat=38&lon=-77&api=https://relay.example&debug=1',runScripts:'dangerously',pretendToBeVisual:true,beforeParse:function(w8){
+    var actualNow=w8.Date.now;w8.Date.now=function(){return actualNow()+windowClockOffset;};
     var timeout=w8.setTimeout,clear=w8.clearTimeout,interval=w8.setInterval;
     w8.setTimeout=function(fn,ms){if(ms===15000){windowIdle=fn;return 999999;}return timeout.apply(this,arguments);};
     w8.clearTimeout=function(id){if(id!==999999){clear.call(this,id);}};
     w8.setInterval=function(fn,ms){if(ms===5000){windowPoll=fn;return 888888;}return interval.apply(this,arguments);};
-    w8.XMLHttpRequest=function(){this.open=function(){};this.send=function(){this.status=replyStatus;this.readyState=4;this.responseText=JSON.stringify(replyBody);this.onreadystatechange();};};
+    w8.XMLHttpRequest=function(){this.open=function(){};this.send=function(){windowRequests++;this.status=replyStatus;this.readyState=4;this.responseText=JSON.stringify(replyBody);this.onreadystatechange();};};
   }});
   await sleep(700);var wd=dom8.window.document;
   ok(wd.getElementById('windowMenu').getAttribute('aria-hidden')==='true','window menu starts closed');
@@ -201,7 +203,10 @@ function btn(label) {
   ok(wd.getElementById('windowMenu').style.display==='none','window Escape closes drawer');
   wd.getElementById('debugToggle').click();
   ok(wd.getElementById('debug').style.display==='none','diagnostics can be disabled');
-  replyStatus=200;replyBody={ac:[]};windowPoll();await sleep(700);
+  windowPoll();windowPoll();ok(windowRequests===1,'failed feed does not repeat requests during cooldown');
+  ok(JSON.parse(dom8.window.localStorage.getItem('windowjet.feed.retry.v1')).until>dom8.window.Date.now(),'cooldown persists for setup and reload');
+  replyStatus=200;replyBody={ac:[]};windowClockOffset=61000;windowPoll();await sleep(700);
+  ok(windowRequests===2&&dom8.window.localStorage.getItem('windowjet.feed.retry.v1')===null,'success after cooldown clears persisted failure state');
   ok(wd.getElementById('feedInfo').textContent==='Live feed connected','feed recovery clears error diagnostics');
   ok(wd.getElementById('idleSub').textContent.indexOf('Retrying')===-1,'feed recovery clears wall error');
   ok(wd.getElementById('idleSub').textContent.indexOf('none match this window')!==-1 && wd.getElementById('idleSub').textContent.indexOf('Limits:')!==-1,'idle distinguishes nearby count from window eligibility');
@@ -219,6 +224,16 @@ function btn(label) {
   ok(sharedDom.window.document.getElementById('mapLink').textContent.indexOf('Set up viewing zone')===0,'hamburger presents map as setup');
   ok(sharedDom.window.document.getElementById('route').textContent==='Route unverified','live route database match is not presented as a confirmed itinerary');
   sharedDom.window.close();
+
+  var probePoll,probeRequest,probeCount=0;
+  var probe=new JSDOM(html,{url:'https://x.github.io/?lat=38&lon=-77&api=https://relay.example',runScripts:'dangerously',pretendToBeVisual:true,beforeParse:function(pw){
+    pw.setInterval=function(fn,ms){if(ms===5000){probePoll=fn;}return 1;};
+    pw.XMLHttpRequest=function(){probeRequest=this;this.open=function(){};this.send=function(){probeCount++;};};
+  }});
+  probePoll();probePoll();ok(probeCount===1,'window prevents overlapping position requests');
+  probeRequest.status=200;probeRequest.readyState=4;probeRequest.responseText='{"ac":[]}';probeRequest.onreadystatechange();
+  Object.defineProperty(probe.window.document,'hidden',{value:true,configurable:true});probePoll();
+  ok(probeCount===1,'hidden main display stops live polling');probe.window.close();
 
   console.log(passes + ' passed, ' + fails + ' failed');
   process.exit(fails ? 1 : 0);

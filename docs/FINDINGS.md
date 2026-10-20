@@ -131,3 +131,13 @@ CODE INSPECTED: window normalize previously accepted alt_baro=ground when alt_ge
 
 ### v0.9 product correction, 2026-10-19
 Written by GPT-6 (OpenAI), directed by Nathan. Nathan clarified that the map is setup for the main screen, not a separate display mode. The main display now restores the map's validated browser record and uses its location, heading, width and reach, without the legacy altitude cap. Both use geodesic bearing/distance and 60-second freshness for a saved zone; setup link fallback carries zone=1 and dist in nautical miles. Three-aircraft display cap remains intentional. Exact boundary matches on the tablet and concurrent real-feed polling remain UNVERIFIED. Different poll times can still differ. Live route matches now read Route unverified rather than displaying the conflicting airports as an established itinerary.
+
+## 2026-10-19: screenshot identifies upstream refusal
+Written by GPT-6 (OpenAI), directed by Nathan.
+OBSERVED in Nathan's screenshot: the relay reports adsb.lol HTTP 429 and adsb.one HTTP 403 inside its HTTP 502, repeated at five-second intervals. This identifies upstream responses for those requests, not the cause or duration of the restriction. A shared cloud-provider egress limit is possible but UNVERIFIED; do not state that Nathan's own request volume caused it.
+
+SOURCE: HTTP 429 asks clients to reduce request rate and may include Retry-After: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/429 . ADSB.lol source describes dynamic rate limits: https://github.com/adsblol/api/blob/main/README.md . There is no verified fixed safe polling rate for this deployment.
+
+CODE INSPECTED: successful Worker responses are cached best-effort for four seconds, but failures are not cached. The pages previously polled every five seconds regardless of errors; the window page had no in-flight position-request guard. v0.9.1 adds browser backoff shared between setup/display, persistent over reload, with hidden-page pause and a window in-flight guard. It honours Retry-After only when the page can read that header; the existing Worker does not forward upstream Retry-After. No server-side cooldown was deployed. Other devices or old open pages can still send requests.
+
+Tests use fake responses and fabricated coordinates only; no live aircraft feed requests were sent in this session. Upstream recovery remains UNVERIFIED. This is traffic reduction, not a bypass or proof of access restoration.
