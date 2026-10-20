@@ -1,3 +1,4 @@
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: ground flag overrides numeric geometric altitude.
 // Directed by: Nathan | Written by: Claude (Sonnet 5.5, Anthropic) | Date: 2026-10-19
 // Change log: 2026-10-19 v0.3.1 Claude, directed by Nathan: copied into the project folder, header added. Logic unchanged.
 // Change log: 2026-10-19 v0.5 GPT-6 (OpenAI), directed by Nathan: multi selection, view switching and helicopter checks.
@@ -60,6 +61,7 @@ ok(near(A.evaluate(c, now + 30000, cfg).altFt, 3000, 1), 'altitude dead-reckons 
 ok(near(A.evaluate(c, now + 600000, cfg).altFt, 4000, 1), 'dead reckoning capped at 60 s');
 
 // --- normalize
+ok(A.normalize({lat:1,lon:1,alt_baro:'ground',alt_geom:35,gs:14},now) === null, 'ground flag overrides positive geometric altitude');
 ok(A.normalize({ lat: 1, lon: 1, alt_baro: 'ground' }, now) === null, 'ground aircraft dropped');
 ok(A.normalize({ lon: 1, alt_baro: 100 }, now) === null, 'missing lat dropped');
 var n = A.normalize({ hex: 'abc', flight: 'UAL123  ', t: 'B738', alt_baro: 2500, gs: 180.5, track: 271, baro_rate: -900, lat: 38.1, lon: -77.1, seen_pos: 2 }, now);
@@ -148,6 +150,16 @@ ok(A.multiView('multi', 1), 'multi override keeps multi with one aircraft');
 ok(A.isHelicopter('H60') && A.isHelicopter('r44') && A.isHelicopter('EC35'), 'recognises supported helicopter types case insensitively');
 ok(!A.isHelicopter('A320') && !A.isHelicopter('B738'), 'jets retain jet icon');
 ok(!A.isHelicopter('') && !A.isHelicopter(null) && !A.isHelicopter('UNKNOWN'), 'unknown types default to aircraft icon');
+
+
+
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: shared map setup config.
+var savedZone={version:1,lat:38,lon:-77,heading:180,fov:60,radius:20,zoom:11,mapLat:38,mapLon:-77,units:'metric',demo:false,api:'https://relay.example'};
+ok(near(parseFloat(A.zoneOptions(savedZone).dist),20000/1852,0.0001),'saved metric reach converts to nautical miles');
+ok(A.zoneOptions({version:1})===null,'incomplete saved zone rejected');
+var zcfg={HOME_LAT:38,HOME_LON:-77,WINDOW_HEADING:180,FOV_DEG:60,MAX_DIST_NM:12,MAX_ALT_FT:Infinity,ZONE:true};
+var za=mk(0,-9,22000);ok(A.pick([za],now,zcfg,null)!==null,'saved zone admits distant high aircraft');
+za._t=now-61000;ok(A.pick([za],now,zcfg,null)===null&&A.pickMany([za],now,zcfg).length===0,'saved zone excludes stale fixes in both modes');
 
 console.log(passes + ' passed, ' + fails + ' failed');
 process.exit(fails ? 1 : 0);

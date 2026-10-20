@@ -107,3 +107,27 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 - TESTED: 279 regression checks pass: 61 window logic, 73 window page, 25 relay mock, 50 map logic, 70 map page; ES5 parsing passes for both pages. Window tests cover idle/wake, focus, relay error details, diagnostic toggling and recovery. Desktop preview confirms controls/debug are in the window menu instead of across the sky.
 - UNVERIFIED: exact cause of the user's 502, the currently deployed Worker source, and real-tablet operation. No Worker deployment or credential handling occurred. The window page now exposes upstream details when the deployed relay provides them.
 - TESTED follow-up in the normal public web app after Pages deployment: the configured relay succeeded for the fabricated 40.12, -75.65 query, and the UI reported 3 raw, 3 airborne and Live feed connected. The window menu was verified at the public URL and the test tab was closed. This demonstrates that the relay worked for that browser/query at that time; it does not establish the cause of the earlier 502 or guarantee continuous availability. No request-signature spoofing or server protection changes were used.
+
+## 2026-10-19 23:23 EDT: callsign cross-check and missing-aircraft investigation
+Written by GPT-6 (OpenAI), directed by Nathan.
+
+TESTED at approximately 03:23 UTC Oct 20: public ADSB.lol callsign queries returned empty ac arrays for SWA4843 and SWA2406. This does not establish their earlier position or ground state. The current adsbdb responses were SWA4843 LAS-FAT and SWA2406 AUS-SMF. Nathan's screenshots show different callsigns, SWA4843 in WindowJet and SWA2406 with MDW-DCA in FR24. They cannot identify the same aircraft from these screenshots alone.
+
+A public airport-centered ADSB.lol point query returned 14 aircraft, including UAL2224, GJS4406 and FDX1040. Callsign route comparisons:
+
+| Callsign | adsbdb | ADSB.lol route lookup |
+| --- | --- | --- |
+| SWA4843 | LAS-FAT | 429, not retried |
+| SWA2406 | AUS-SMF | SAN-TUS-DEN |
+| UAL2224 | SEA-SFO | PHX-IAH-DCA |
+| GJS4406 | DCA-EWR | MLI-ORD |
+| FDX1040 | EWR-GSO | EWR-GSO |
+
+Neither provider's route is verified as the current flight leg. ADSB.lol returned plausible=true even for SWA2406's southwestern route queried at DCA. Source inspection shows cached routes returned without recalculating plausibility, so that flag must not be treated as current-location validation. A routeset POST returned HTTP 201 with an empty body and was inconclusive. Stop requests after the observed rate limit; no bypass or retry performed.
+
+Primary references: https://api.adsb.lol/docs and https://raw.githubusercontent.com/adsblol/api/main/src/adsb_api/utils/api_routes.py . Actual calls used public callsigns and public airport coordinates only.
+
+CODE INSPECTED: window normalize previously accepted alt_baro=ground when alt_geom was numeric. Fixed explicit flag precedence in v0.8.1; low speed or low numeric altitude alone does not prove ground state. Window defaults remain 6 nm/12,000 ft; map uses its adjustable reach and no altitude ceiling. Map-to-window links carry heading/FOV but not map reach, and each view polls independently. These differences can explain discrepancies but the user's exact missing-aircraft cause remains UNVERIFIED without contemporaneous records and settings. Idle text now states the window limits instead of suggesting every nearby aircraft should appear.
+
+### v0.9 product correction, 2026-10-19
+Written by GPT-6 (OpenAI), directed by Nathan. Nathan clarified that the map is setup for the main screen, not a separate display mode. The main display now restores the map's validated browser record and uses its location, heading, width and reach, without the legacy altitude cap. Both use geodesic bearing/distance and 60-second freshness for a saved zone; setup link fallback carries zone=1 and dist in nautical miles. Three-aircraft display cap remains intentional. Exact boundary matches on the tablet and concurrent real-feed polling remain UNVERIFIED. Different poll times can still differ. Live route matches now read Route unverified rather than displaying the conflicting airports as an established itinerary.

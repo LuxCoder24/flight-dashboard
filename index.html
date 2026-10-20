@@ -8,6 +8,13 @@
   Project docs (same folder): README.md, AGENTS.md (LLMs start here), LOG.md, CHANGELOG.md, docs/FINDINGS.md
 
   CHANGE LOG
+  2026-10-19 v0.9 GPT-6 (OpenAI), directed by Nathan: map becomes zone setup;
+              main screen reads its saved wedge/reach, with matching altitude/age rules.
+              map.html, both DOM suites, logic tests and project docs updated.
+  2026-10-19  v0.8.1 GPT-6 (OpenAI), directed by Nathan: reject explicit ground flags
+              even with geometric altitude; explain window exclusions in idle text.
+              tests/test_windowjet.js and tests/dom_test.js cover both corrections.
+              Investigation notes in docs/FINDINGS.md, CHANGELOG.md and LOG.md; test counts updated.
   2026-10-19  v0.1  Claude, directed by Nathan
               Initial version: polls a public ADS-B API, picks the nearest aircraft
               inside the window's field of view, animates it at its true sky position,
@@ -200,7 +207,7 @@
       <button type="button" data-view="auto">Auto</button>
       <button type="button" data-view="single">Single focus</button>
       <button type="button" data-view="multi">Multi aircraft</button>
-      <a id="mapLink" href="map.html">Map view ↗</a>
+      <a id="mapLink" href="map.html">Set up viewing zone ↗</a>
     </div>
   <div id="demoSlot"></div>
   <label class="diagnosticsLabel"><input id="debugToggle" type="checkbox"> Show diagnostics</label>
@@ -279,7 +286,7 @@
 
   // Turn one raw API record into a clean aircraft, or null if unusable / on the ground.
   function normalize(raw, now) {
-    if (!raw || !isNum(raw.lat) || !isNum(raw.lon)) { return null; }
+    if (!raw || raw.alt_baro === 'ground' || !isNum(raw.lat) || !isNum(raw.lon)) { return null; }
     var alt = isNum(raw.alt_baro) ? raw.alt_baro : (isNum(raw.alt_geom) ? raw.alt_geom : null);
     if (alt === null) { return null; }   // "ground" or no altitude
     var seen = isNum(raw.seen_pos) ? raw.seen_pos : 0;
@@ -302,6 +309,12 @@
     var n = (lat - cfg.HOME_LAT) * M_PER_DEG;
     var distM = Math.sqrt(e * e + n * n);
     var az = norm360(toDeg(Math.atan2(e, n)));
+    if (cfg.ZONE) {
+      var dlat = toRad(lat - cfg.HOME_LAT), dlon = toRad(lon - cfg.HOME_LON);
+      var hav = Math.sin(dlat / 2) * Math.sin(dlat / 2) + Math.cos(toRad(cfg.HOME_LAT)) * Math.cos(toRad(lat)) * Math.sin(dlon / 2) * Math.sin(dlon / 2);
+      hav = clamp(hav, 0, 1); distM = 2 * 6371000 * Math.atan2(Math.sqrt(hav), Math.sqrt(1 - hav));
+      az = norm360(toDeg(Math.atan2(Math.sin(dlon) * Math.cos(toRad(lat)), Math.cos(toRad(cfg.HOME_LAT)) * Math.sin(toRad(lat)) - Math.sin(toRad(cfg.HOME_LAT)) * Math.cos(toRad(lat)) * Math.cos(dlon))));
+    }
     var el = toDeg(Math.atan2(altFt * 0.3048, distM));
     var rel = norm180(az - cfg.WINDOW_HEADING);
     return { lat: lat, lon: lon, altFt: altFt, distNm: distM / 1852, az: az, el: el, rel: rel,
@@ -317,6 +330,7 @@
     var best = null, i, ev, cur = null;
     for (i = 0; i < list.length; i++) {
       ev = evaluate(list[i], now, cfg);
+      if (cfg.ZONE && now - list[i]._t > 60000) { continue; }
       if (!isCandidate(ev, cfg)) { continue; }
       if (list[i].hex === currentHex) { cur = { ac: list[i], ev: ev }; }
       if (best === null || ev.distNm < best.ev.distNm) { best = { ac: list[i], ev: ev }; }
@@ -329,6 +343,7 @@
     var out = [], i, ev;
     for (i = 0; i < list.length; i++) {
       ev = evaluate(list[i], now, cfg);
+      if (cfg.ZONE && now - list[i]._t > 60000) { continue; }
       if (isCandidate(ev, cfg)) { out.push({ ac: list[i], ev: ev }); }
     }
     out.sort(function (a, b) { return a.ev.distNm - b.ev.distNm || (a.ac.hex < b.ac.hex ? -1 : (a.ac.hex > b.ac.hex ? 1 : 0)); });
@@ -405,7 +420,11 @@
     return ageSec < 900 && raw.alt_baro > -50 && Math.sqrt(raw._eNm * raw._eNm + raw._nNm * raw._nNm) < 14;
   }
 
-  var api = { pickMany: pickMany, isHelicopter: isHelicopter, multiView: multiView, normalize: normalize, evaluate: evaluate, isCandidate: isCandidate, pick: pick,
+function zoneOptions(v){
+ if(!v||v.version!==1||!isNum(v.lat)||Math.abs(v.lat)>85.05112878||!isNum(v.lon)||Math.abs(v.lon)>180||!isNum(v.heading)||v.heading<0||v.heading>=360||!isNum(v.fov)||v.fov<20||v.fov>180||!isNum(v.radius)||v.radius<1||v.radius>(v.units==='aviation'?24:44)||!isNum(v.zoom)||v.zoom<3||v.zoom>17||v.zoom%1!==0||!isNum(v.mapLat)||Math.abs(v.mapLat)>85.05112878||!isNum(v.mapLon)||Math.abs(v.mapLon)>180||(v.units!=='metric'&&v.units!=='aviation')||typeof v.demo!=='boolean'||typeof v.api!=='string'||(v.api&&!/^https:\/\//.test(v.api))){return null;}
+ return {zone:'1',dist:String(v.radius*(v.units==='aviation'?1:1000/1852)),lat:String(v.lat),lon:String(v.lon),heading:String(v.heading),fov:String(v.fov),radius:String(v.radius),zoom:String(v.zoom),maplat:String(v.mapLat),maplon:String(v.mapLon),units:v.units,demo:v.demo?'1':'0',api:v.api};
+}
+  var api = { zoneOptions: zoneOptions, pickMany: pickMany, isHelicopter: isHelicopter, multiView: multiView, normalize: normalize, evaluate: evaluate, isCandidate: isCandidate, pick: pick,
               spriteDir: spriteDir, pitchDeg: pitchDeg, formatStats: formatStats, parseRoute: parseRoute,
               norm180: norm180, norm360: norm360, simRaw: simRaw, simAlive: simAlive, DEMO_PRESETS: DEMO_PRESETS,
               CONFIG: CONFIG };
@@ -417,6 +436,13 @@
   var qs = {}, parts = (location.search || '').replace(/^\?/, '').split('&'), pi;
   for (pi = 0; pi < parts.length; pi++) {
     if (parts[pi]) { var kv = parts[pi].split('='); qs[kv[0]] = decodeURIComponent(kv[1] || ''); }
+  }
+  var zoneRaw = '', zoneSaved = null, zoneKey = 'windowjet.map.view.v1', zoneOption;
+  try { zoneRaw = window.localStorage.getItem(zoneKey) || ''; zoneSaved = zoneOptions(JSON.parse(zoneRaw || 'null')); } catch (zoneError) {}
+  if (zoneSaved && qs.useurl !== '1') {
+    var forceDemo = qs.demo === '1';
+    for (zoneOption in zoneSaved) { if (Object.prototype.hasOwnProperty.call(zoneSaved, zoneOption)) { qs[zoneOption] = zoneSaved[zoneOption]; } }
+    if (forceDemo) { qs.demo = '1'; }
   }
   if (qs.lat && qs.lon) { CONFIG.HOME_LAT = parseFloat(qs.lat); CONFIG.HOME_LON = parseFloat(qs.lon); CONFIG.HOME_SET = true; }
   if (qs.heading) { CONFIG.WINDOW_HEADING = parseFloat(qs.heading); }
@@ -430,6 +456,13 @@
   if (qs.api && /^https:\/\//.test(qs.api)) { CONFIG.API_BASES = [qs.api.replace(/\/+$/, '') + '/v2/point']; }
   // No coordinates given means demo mode (fake planes), so the page works the moment it is opened.
   CONFIG.DEMO = qs.demo === '1' || !CONFIG.HOME_SET; CONFIG.DEBUG = qs.debug === '1';
+
+  CONFIG.ZONE = qs.zone === '1';
+  if (CONFIG.ZONE) { CONFIG.MAX_ALT_FT = Infinity; CONFIG.RADIUS_NM = Math.min(25, Math.ceil(CONFIG.MAX_DIST_NM) + 1); }
+  function checkZoneChange() { if (qs.useurl === '1') { return; } try { if ((window.localStorage.getItem(zoneKey) || '') !== zoneRaw) { location.reload(); } } catch (zoneError) {} }
+  window.addEventListener('storage', checkZoneChange);
+  window.addEventListener('focus', checkZoneChange);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { checkZoneChange(); } });
 
   var sky = $('sky'), panel = $('panel'), plane = $('plane'), trailBox = $('trail');
   var aircraft = [], nearbyCount = 0, lastOk = 0, lastErr = '', featured = null, dir = 1;
@@ -609,14 +642,14 @@
     $('airline').textContent = rt && rt.airline ? rt.airline : '';
     var chip = $('chip');
     chip.textContent = ac.vr > 300 ? 'CLIMBING' : (ac.vr < -300 ? 'DESCENDING' : 'LEVEL');
-    if (rt && rt.origin && rt.dest) {
+    if (rt && rt.origin && rt.dest && CONFIG.DEMO) {
       $('route').innerHTML = '';
       $('route').appendChild(document.createTextNode(rt.origin.code || '?'));
       var ar = document.createElement('span'); ar.className = 'arrow'; ar.textContent = '→'; $('route').appendChild(ar);
       $('route').appendChild(document.createTextNode(rt.dest.code || '?'));
       $('cities').textContent = (rt.origin.city || '') + (rt.dest.city ? '  to  ' + rt.dest.city : '');
     } else {
-      $('route').textContent = routeCache.hasOwnProperty(ac.callsign) ? 'Route unavailable' : '';
+      $('route').textContent = rt && !CONFIG.DEMO ? 'Route unverified' : (routeCache.hasOwnProperty(ac.callsign) ? 'Route unavailable' : '');
       $('cities').textContent = '';
     }
     $('vAlt').textContent = s.alt; $('uAlt').textContent = s.altU;
@@ -637,7 +670,7 @@
       var card = document.createElement('div'); card.className = 'aircraftCard';
       cardLine(card, 'strong', ac.callsign || ac.reg || ac.hex);
       cardLine(card, 'div', (isHelicopter(ac.type) ? 'Helicopter' : ac.type || 'Aircraft'));
-      cardLine(card, 'div', rt && rt.origin && rt.dest ? rt.origin.code + ' → ' + rt.dest.code :
+      cardLine(card, 'div', rt && rt.origin && rt.dest ? (CONFIG.DEMO ? rt.origin.code + ' → ' + rt.dest.code : 'Route unverified') :
         (routeCache.hasOwnProperty(ac.callsign) ? 'Route unavailable' : 'Looking up route'), 'cardRoute');
       cardLine(card, 'div', rt && rt.airline ? rt.airline : '');
       cardLine(card, 'div', stats.alt + ' ' + stats.altU + ' · ' + stats.spd + ' ' + stats.spdU);
@@ -665,7 +698,11 @@
 
   function renderIdle(now) {
     var ago = lastOk ? Math.round((now - lastOk) / 1000) : -1;
-    var sub = nearbyCount + ' aircraft within ' + CONFIG.RADIUS_NM + ' nm';
+    var sub = nearbyCount + ' airborne nearby; none match this window. Limits: ' +
+      (CONFIG.UNITS === 'aviation' ? CONFIG.MAX_DIST_NM + ' nm, ' + CONFIG.MAX_ALT_FT + ' ft' :
+       Math.round(CONFIG.MAX_DIST_NM * 1.852 * 10) / 10 + ' km, ' + Math.round(CONFIG.MAX_ALT_FT * 0.3048) + ' m') +
+      ', heading ' + CONFIG.WINDOW_HEADING + '°, field of view ' + CONFIG.FOV_DEG + '°';
+    if (CONFIG.ZONE) { sub = nearbyCount + ' airborne nearby; none inside your saved viewing zone'; }
     if (lastErr) { sub = 'Live feed unavailable. Retrying…'; }
     $('idleSub').textContent = (lastSeenLabel ? 'Last seen: ' + lastSeenLabel + '  |  ' : '') + sub;
   }

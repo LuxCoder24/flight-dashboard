@@ -77,3 +77,16 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 - README.md, AGENTS.md, docs/FINDINGS.md and LOG.md updated. Captured docs/previews/window-menu-v0.8.png by GPT-6 (OpenAI), directed by Nathan, using fake demo aircraft at the public placeholder.
 - Service diagnosis remains inconclusive: the configured Worker rejected the diagnostic Python client with a Cloudflare 403, while the user's screenshot shows 502. Direct adsb.lol returned 200 but no browser CORS header; adsb.one returned 403. These results do not prove why the tablet relay failed.
 - Publication verified: 9ef3ccae83b95d5ad0579e2d75887c1a145e03c8 deployed successfully and the public window menu was checked. A legitimate public-page test using fabricated coordinates received three airborne aircraft and Live feed connected from the configured relay; the earlier 502 was not reproduced in that test. No server configuration was changed.
+
+## v0.8.1 (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- index.html rejects explicit ground flags even with numeric geometric altitude; idle text explains window distance, altitude and direction filters.
+- tests/test_windowjet.js adds a ground-flag regression; tests/dom_test.js checks the idle explanation. README.md and AGENTS.md update counts and note scope.
+- docs/FINDINGS.md and LOG.md record public callsign comparisons, route disagreement and the unresolved screenshot discrepancy. No route provider or filtering limits changed.
+
+## v0.9 (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- Corrected product intent: map.html configures the main display's viewing zone. Updated setup wording and display links; links carry reach for storage fallback.
+- index.html consumes the same validated browser preferences and checks for changes on focus/storage/visibility. Saved zones use their full reach, no altitude ceiling, geodesic wedge bounds and 60-second freshness, with a padded feed query. Existing explicit URL bypass and forced demo stay available.
+- Live route lookup results are unverified and no longer displayed as authoritative origin/destination; demo route examples stay intact.
+- tests/test_windowjet.js, tests/dom_test.js and tests/map_dom_test.js cover shared zone configuration. README.md, AGENTS.md, docs/FINDINGS.md and LOG.md document this correction and test counts.

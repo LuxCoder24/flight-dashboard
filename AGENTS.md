@@ -3,7 +3,7 @@
 This file is tool neutral. Any assistant (Claude, ChatGPT, Gemini, a local model, a coding agent) should be able to continue the project from this file alone, plus `LOG.md` and `docs/FINDINGS.md`.
 
 Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
-Change: v0.8 extends hamburger/idle controls to the window view and keeps relay diagnostics in its drawer; prior rules retained.
+Change: v0.9 corrects the map purpose to main-display zone setup and shares saved wedge/reach; prior rules retained.
 
 ## 1. Read order
 
@@ -75,18 +75,18 @@ Relay (`worker/worker.js`, a Cloudflare Worker): serves `GET /v2/point/{lat}/{lo
 ## 6. Tests
 
 ```
-node tests/test_windowjet.js index.html          # expect: 61 passed, 0 failed
-node tests/dom_test.js <path-to-jsdom> index.html  # expect: 73 passed, 0 failed
+node tests/test_windowjet.js index.html          # expect: 66 passed, 0 failed
+node tests/dom_test.js <path-to-jsdom> index.html  # expect: 78 passed, 0 failed
 node worker/test_worker.mjs                        # expect: 25 passed, 0 failed (needs nothing installed)
 node tests/test_map.js map.html                     # expect: 50 passed, 0 failed
-node tests/map_dom_test.js <path-to-jsdom> map.html  # expect: 70 passed, 0 failed
+node tests/map_dom_test.js <path-to-jsdom> map.html  # expect: 71 passed, 0 failed
 ```
 
 `jsdom` must be installed first (see `README.md`). jsdom has no layout engine, so these tests prove logic and wiring, not appearance. If you add features, add tests, and update the expected counts here and in `README.md`.
 
 ## 7. Current state and next steps (as of 2026-10-19)
 
-State: v0.8, with a separate map edition v0.2, published in commit 5acc488cd5cb1307ae0ee011304fd248c08f965c. Hosted hamburger and Save view controls verified on desktop. `map.html` has a geographic basemap and an editable forward viewing wedge. Its count includes only airborne aircraft in that wedge, at any altitude, without a three-aircraft cap. Both editions use the same relay URL option. Map controls and geometry have 50 logic and 70 page checks; window page checks now total 73. Both editions now use a hamburger for their controls with 15-second idle hiding. Window diagnostics stay in the drawer, and feed errors use a short retry message. The earlier relay 502 cause is unresolved; a later public-browser test with fabricated coordinates succeeded. No Worker deployment occurred during the UI fix. Demo mode supports automatic single/multi view switching, up to three eligible aircraft and helicopter silhouettes. `?view=auto|single|multi` sets the starting choice; Auto is the default. Multi mode shows the three nearest eligible aircraft; single focus retains the current valid aircraft. Hosted at https://luxcoder24.github.io/flight-dashboard/ (window and map editions published 2026-10-19; the public map loaded successfully, and the latest LOG.md records deployment details). Live mode needs a relay because the public plane-position feeds (adsb.lol, adsb.one, adsb.fi, airplanes.live) send no CORS header, so a web page cannot call them (tested 2026-10-19; details in `docs/FINDINGS.md`). The route lookup (adsbdb) does work from a browser. The relay (`worker/`) is written, passes 25 mock tests and compiles under Cloudflare's tool (`wrangler deploy --dry-run`), and was deployed by Nathan, but returned 502 because both feeds failed (relay session in LOG.md). The local diagnostic details update awaits redeployment; why the feeds failed remains UNVERIFIED. Settled: GitHub user `luxcoder24`, repo `flight-dashboard`. Nathan's window coordinates were given in chat on 2026-10-19 and are kept out of the files on purpose (rule 11).
+State: v0.9 prepared, with map.html as viewing-zone setup v0.3. Last published main before this session was 94878aabf63264654946de43e56a39ad0a035066. Saved map preferences now configure the main display, removing the legacy distance/altitude mismatch for saved zones. Live route matches display Route unverified. Hosted hamburger and Save view controls verified on desktop. `map.html` has a geographic basemap and an editable forward viewing wedge. Its count includes only airborne aircraft in that wedge, at any altitude, without a three-aircraft cap. Both editions use the same relay URL option. Map controls and geometry have 50 logic and 71 page checks; window page checks now total 78. Both editions now use a hamburger for their controls with 15-second idle hiding. Window diagnostics stay in the drawer, and feed errors use a short retry message. The earlier relay 502 cause is unresolved; a later public-browser test with fabricated coordinates succeeded. No Worker deployment occurred during the UI fix. Demo mode supports automatic single/multi view switching, up to three eligible aircraft and helicopter silhouettes. `?view=auto|single|multi` sets the starting choice; Auto is the default. Multi mode shows the three nearest eligible aircraft; single focus retains the current valid aircraft. Hosted at https://luxcoder24.github.io/flight-dashboard/ (window and map editions published 2026-10-19; the public map loaded successfully, and the latest LOG.md records deployment details). Live mode needs a relay because the public plane-position feeds (adsb.lol, adsb.one, adsb.fi, airplanes.live) send no CORS header, so a web page cannot call them (tested 2026-10-19; details in `docs/FINDINGS.md`). The route lookup (adsbdb) does work from a browser. The relay (`worker/`) is written, passes 25 mock tests and compiles under Cloudflare's tool (`wrangler deploy --dry-run`), and was deployed by Nathan, but returned 502 because both feeds failed (relay session in LOG.md). The local diagnostic details update awaits redeployment; why the feeds failed remains UNVERIFIED. Settled: GitHub user `luxcoder24`, repo `flight-dashboard`. Nathan's window coordinates were given in chat on 2026-10-19 and are kept out of the files on purpose (rule 11).
 
 Next steps, in priority order:
 
@@ -120,3 +120,7 @@ Next: <what should happen next>
 - [ ] `docs/FINDINGS.md` updated if you learned or tested anything about APIs or devices.
 - [ ] `LOG.md` entry appended.
 - [ ] Section 7 of this file updated if the state or next steps changed.
+
+2026-10-19, GPT-6 (OpenAI), directed by Nathan: v0.8.1 fixes ground-flag normalization and clarifies window idle limits. Route-feed comparisons are recorded in docs/FINDINGS.md; provider disagreement is not a verified current itinerary.
+
+2026-10-19 v0.9, GPT-6 (OpenAI), directed by Nathan: map.html is the viewing-zone setup tool. Save the wedge, then use Open display. index.html reads the same local saved record, overriding old bookmark location/heading/reach; useurl=1 remains an explicit bypass and demo=1 stays simulated. Saved zones remove the legacy altitude ceiling, use a padded feed radius capped at 25 nm, and reject fixes older than 60 seconds. Setup links carry zone/reach for browsers with blocked storage. Main display remains Auto/single/multi with up to three aircraft. Live callsign-route matches are shown as Route unverified instead of a confident itinerary; demo routes remain visible.

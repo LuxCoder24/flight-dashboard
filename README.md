@@ -5,14 +5,14 @@ A DIY replica of [JetClock](https://jetclock.io) (a live "what plane is above me
 Owner: Nathan. Planes departing DCA (Washington National) fly past his window, which faces about 190 degrees (almost due south).
 
 Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
-Change: v0.8 applies the hamburger and idle hiding to the window edition too, with clearer feed errors and in-menu diagnostics.
+Change: v0.9 uses the map to set up the main display viewing zone; saved wedge and reach are shared.
 
-## Status (v0.8, map edition v0.2)
+## Status (v0.9, zone setup v0.3)
 
 | Part | State |
 |---|---|
-| Map edition (`map.html`) | Separate geographic map with a selectable viewing wedge, demo/live modes and aircraft details. 50 geometry and 70 page checks pass; desktop map preview inspected. |
-| Demo mode (fake planes, button controls) | Works. 73 simulated-browser checks pass; desktop browser preview inspected. Tablet still untested. |
+| Map edition (`map.html`) | Geographic setup map that selects the main display viewing wedge, demo/live modes and aircraft details. 50 geometry and 71 page checks pass; desktop map preview inspected. |
+| Demo mode (fake planes, button controls) | Works. 78 simulated-browser checks pass; desktop browser preview inspected. Tablet still untested. |
 | Live mode (real planes) | Uses the relay below. The map edition has not been tested against real feeds; current deployed configuration was not inspected in this session. See `docs/FINDINGS.md`. |
 | Relay (`worker/`) | Deployed by Nathan but both upstream feeds failed. Local diagnostics update awaits redeployment. 25 mock tests pass in the latest session. Current deployment configuration has not been rechecked. Setup: `docs/RELAY_SETUP.md`. |
 | Route lookup (origin and destination) | Works from a browser (tested 2026-10-19). |
@@ -82,7 +82,7 @@ Use the Auto, Single focus or Multi aircraft buttons to change the choice. `?vie
 |---|---|
 | `map.html` | Separate single-file, ES5 map edition with adjustable viewing wedge. |
 | `tests/test_map.js` | 50 map geometry and filtering checks. |
-| `tests/map_dom_test.js` | 70 map control and relay-wiring checks. |
+| `tests/map_dom_test.js` | 71 map control and relay-wiring checks. |
 | `docs/previews/map-menu-v0.2.png` | Desktop preview of the map settings/views drawer. |
 | `docs/previews/map-wedge-v0.1.png` | Desktop demo preview, public placeholder location. |
 | `index.html` | The whole app in one file (HTML, CSS, JavaScript). GitHub Pages needs it at the root. |
@@ -93,8 +93,8 @@ Use the Auto, Single focus or Multi aircraft buttons to change the choice. `?vie
 | `docs/RELAY_SETUP.md` | Step by step: deploy the relay and point the tablet at it. |
 | `worker/worker.js` | The relay: a small Cloudflare Worker. `worker/wrangler.jsonc` is its config. |
 | `worker/test_worker.mjs` | Tests for the relay with a mocked feed (25 checks, nothing to install). |
-| `tests/test_windowjet.js` | Unit tests for the logic (61 checks). |
-| `tests/dom_test.js` | Runs the page in a simulated browser and clicks every demo button (73 checks). |
+| `tests/test_windowjet.js` | Unit tests for the logic (66 checks). |
+| `tests/dom_test.js` | Runs the page in a simulated browser and clicks every demo button (78 checks). |
 
 ## Running the tests
 
@@ -116,7 +116,7 @@ node tests/map_dom_test.js ~/jsdom-env/node_modules/jsdom map.html
 
 The relay tests need nothing installed: `node worker/test_worker.mjs`.
 
-Expected as of v0.8: 61 window logic, 73 window page, 25 relay, 50 map logic and 70 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
+Expected as of v0.9: 66 window logic, 78 window page, 25 relay, 50 map logic and 71 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
 
 ## Hardware and hosting plan
 
@@ -127,3 +127,7 @@ Expected as of v0.8: 61 window logic, 73 window page, 25 relay, 50 map logic and
 ## Working on this with more than one LLM
 
 Read `AGENTS.md`. Short version: sign every edit (who directed, who wrote, date), add a dated change log entry, tag facts as verified or unverified, run both test files before handing over, and append to `LOG.md`.
+
+2026-10-19, GPT-6 (OpenAI), directed by Nathan: v0.8.1 fixes ground-flag normalization and clarifies window idle limits. Route-feed comparisons are recorded in docs/FINDINGS.md; provider disagreement is not a verified current itinerary.
+
+2026-10-19 v0.9, GPT-6 (OpenAI), directed by Nathan: map.html is the viewing-zone setup tool. Save the wedge, then use Open display. index.html reads the same local saved record, overriding old bookmark location/heading/reach; useurl=1 remains an explicit bypass and demo=1 stays simulated. Saved zones remove the legacy altitude ceiling, use a padded feed radius capped at 25 nm, and reject fixes older than 60 seconds. Setup links carry zone/reach for browsers with blocked storage. Main display remains Auto/single/multi with up to three aircraft. Live callsign-route matches are shown as Route unverified instead of a confident itinerary; demo routes remain visible.

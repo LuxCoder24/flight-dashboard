@@ -1,3 +1,4 @@
+// 2026-10-19 GPT-6 (OpenAI), directed by Nathan: verify idle window filter explanation.
 // Directed by: Nathan | Written by: Claude (Sonnet 5.5, Anthropic) | Date: 2026-10-19
 // Change log: 2026-10-19 v0.3.1 Claude, directed by Nathan: copied into the project folder, header added. Logic unchanged.
 //             2026-10-19 v0.4   Claude, directed by Nathan: added checks 11 and 12 for the ?api= option (now 36 checks).
@@ -203,7 +204,21 @@ function btn(label) {
   replyStatus=200;replyBody={ac:[]};windowPoll();await sleep(700);
   ok(wd.getElementById('feedInfo').textContent==='Live feed connected','feed recovery clears error diagnostics');
   ok(wd.getElementById('idleSub').textContent.indexOf('Retrying')===-1,'feed recovery clears wall error');
+  ok(wd.getElementById('idleSub').textContent.indexOf('none match this window')!==-1 && wd.getElementById('idleSub').textContent.indexOf('Limits:')!==-1,'idle distinguishes nearby count from window eligibility');
   dom8.window.close();
+
+  // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: saved setup drives the display.
+  var shared={version:1,lat:38,lon:-77,heading:180,fov:60,radius:20,zoom:11,mapLat:38,mapLon:-77,units:'metric',demo:false,api:'https://relay.example'}, sharedUrls=[];
+  var sharedDom=new JSDOM(html,{url:'https://x.github.io/?lat=1&lon=1&dist=1&alt=100',runScripts:'dangerously',pretendToBeVisual:true,beforeParse:function(sw){
+    sw.localStorage.setItem('windowjet.map.view.v1',JSON.stringify(shared));
+    sw.XMLHttpRequest=function(){this.open=function(method,url){this.url=url;sharedUrls.push(url);};this.send=function(){this.status=200;this.readyState=4;this.responseText=JSON.stringify(this.url.indexOf('/callsign/')!==-1?{response:{flightroute:{origin:{iata_code:'LAS'},destination:{iata_code:'FAT'}}}}:{ac:[{hex:'high',flight:'ZONEHIGH',lat:37.9,lon:-77,alt_baro:22000,gs:0,track:180}]});this.onreadystatechange();};};
+  }});
+  await sleep(1100);
+  ok(sharedUrls[0]==='https://relay.example/v2/point/38/-77/12','main display loads saved centre, reach and relay over old bookmark');
+  ok(sharedDom.window.document.getElementById('callsign').textContent==='ZONEHIGH','main display includes high aircraft beyond old six-mile limit inside saved zone');
+  ok(sharedDom.window.document.getElementById('mapLink').textContent.indexOf('Set up viewing zone')===0,'hamburger presents map as setup');
+  ok(sharedDom.window.document.getElementById('route').textContent==='Route unverified','live route database match is not presented as a confirmed itinerary');
+  sharedDom.window.close();
 
   console.log(passes + ' passed, ' + fails + ' failed');
   process.exit(fails ? 1 : 0);
