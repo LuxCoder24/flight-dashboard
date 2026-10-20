@@ -3,6 +3,7 @@
 //             2026-10-19 v0.4   Claude, directed by Nathan: added checks 11 and 12 for the ?api= option (now 36 checks).
 // Change log: 2026-10-19 v0.5 GPT-6 (OpenAI), directed by Nathan: icon and automatic/manual multi-view lifecycle checks.
 // Change log: 2026-10-19 v0.6 GPT-6 (OpenAI), directed by Nathan: map link and option forwarding checks.
+// Change log: 2026-10-19 v0.8 GPT-6 (OpenAI), directed by Nathan: window hamburger, idle and relay-error diagnostics/recovery.
 // Runs the real page in jsdom (demo mode) and clicks every control.
 // Usage: node dom_test.js <path to jsdom module dir> <path to index.html>
 var JSDOM = require(process.argv[2]).JSDOM;
@@ -31,6 +32,10 @@ function btn(label) {
   ok(errors.length === 0, 'no script errors on load: ' + errors.join(' | '));
   var labels = [].map.call(d.querySelectorAll('#demoBar button'), function (b) { return b.textContent; });
   ok(labels.length === 11, 'demo bar has 11 buttons, got ' + labels.length + ': ' + labels.join(', '));
+
+  ok(d.getElementById('windowMenu').contains(d.getElementById('viewBar')), 'window views moved into hamburger');
+  ok(d.getElementById('windowMenu').contains(d.getElementById('demoBar')), 'demo controls moved into hamburger');
+  ok(d.getElementById('windowMenu').contains(d.getElementById('debug')), 'diagnostics are inside hamburger');
 
   // 1. The auto-spawned first plane should become the featured one and fill the panel.
   ok(d.getElementById('panel').className.indexOf('idle') === -1, 'panel is live after load');
@@ -166,6 +171,39 @@ function btn(label) {
   ok(dom7.window.document.getElementById('panel').className === 'multi', 'view URL option starts in multi');
   ok(/ft/.test(dom7.window.document.getElementById('multiCards').textContent) && /kt/.test(dom7.window.document.getElementById('multiCards').textContent), 'multi cards respect aviation units');
   dom7.window.close();
+
+  // 14. Window-edition idle controls and relay diagnostics, without real network access.
+  var windowIdle, windowPoll, replyStatus=502, replyBody={error:'all upstream feeds failed',details:['adsb.lol: HTTP 403','adsb.one: HTTP 403']};
+  var dom8=new JSDOM(html,{url:'https://x.github.io/?lat=38&lon=-77&api=https://relay.example&debug=1',runScripts:'dangerously',pretendToBeVisual:true,beforeParse:function(w8){
+    var timeout=w8.setTimeout,clear=w8.clearTimeout,interval=w8.setInterval;
+    w8.setTimeout=function(fn,ms){if(ms===15000){windowIdle=fn;return 999999;}return timeout.apply(this,arguments);};
+    w8.clearTimeout=function(id){if(id!==999999){clear.call(this,id);}};
+    w8.setInterval=function(fn,ms){if(ms===5000){windowPoll=fn;return 888888;}return interval.apply(this,arguments);};
+    w8.XMLHttpRequest=function(){this.open=function(){};this.send=function(){this.status=replyStatus;this.readyState=4;this.responseText=JSON.stringify(replyBody);this.onreadystatechange();};};
+  }});
+  await sleep(700);var wd=dom8.window.document;
+  ok(wd.getElementById('windowMenu').getAttribute('aria-hidden')==='true','window menu starts closed');
+  ok(wd.getElementById('idleSub').textContent.indexOf('Live feed unavailable. Retrying')!==-1,'wall uses short honest feed error');
+  ok(wd.getElementById('idleSub').textContent.indexOf('https://')===-1,'wall does not show technical relay URL');
+  ok(wd.getElementById('debug').textContent.indexOf('adsb.lol: HTTP 403')!==-1,'relay response details captured for diagnostics');
+  ok(wd.getElementById('feedInfo').textContent.indexOf('HTTP 502')!==-1,'menu retains error status');
+  wd.getElementById('windowMenuButton').click();
+  ok(wd.getElementById('windowMenu').style.display==='block'&&wd.getElementById('windowMenuButton').getAttribute('aria-expanded')==='true','window hamburger opens');
+  wd.getElementById('debugToggle').focus();windowIdle();
+  ok(wd.getElementById('windowMenu').style.display==='none'&&wd.body.className==='windowUiHidden','window idle hides controls');
+  ok(wd.getElementById('windowMenuButton').getAttribute('aria-expanded')==='false','window idle accessibility state correct');
+  ok(wd.activeElement===wd.getElementById('windowMenuButton'),'window idle returns keyboard focus');
+  wd.dispatchEvent(new dom8.window.MouseEvent('mousedown',{bubbles:true}));
+  ok(wd.body.className==='','window interaction wakes UI');
+  wd.getElementById('windowMenuButton').click();
+  wd.dispatchEvent(new dom8.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  ok(wd.getElementById('windowMenu').style.display==='none','window Escape closes drawer');
+  wd.getElementById('debugToggle').click();
+  ok(wd.getElementById('debug').style.display==='none','diagnostics can be disabled');
+  replyStatus=200;replyBody={ac:[]};windowPoll();await sleep(700);
+  ok(wd.getElementById('feedInfo').textContent==='Live feed connected','feed recovery clears error diagnostics');
+  ok(wd.getElementById('idleSub').textContent.indexOf('Retrying')===-1,'feed recovery clears wall error');
+  dom8.window.close();
 
   console.log(passes + ' passed, ' + fails + ' failed');
   process.exit(fails ? 1 : 0);

@@ -5,14 +5,14 @@ A DIY replica of [JetClock](https://jetclock.io) (a live "what plane is above me
 Owner: Nathan. Planes departing DCA (Washington National) fly past his window, which faces about 190 degrees (almost due south).
 
 Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
-Change: v0.7 / map v0.2 adds browser-saved views, a settings/views hamburger and 15-second idle hiding.
+Change: v0.8 applies the hamburger and idle hiding to the window edition too, with clearer feed errors and in-menu diagnostics.
 
-## Status (v0.7, map edition v0.2)
+## Status (v0.8, map edition v0.2)
 
 | Part | State |
 |---|---|
 | Map edition (`map.html`) | Separate geographic map with a selectable viewing wedge, demo/live modes and aircraft details. 50 geometry and 70 page checks pass; desktop map preview inspected. |
-| Demo mode (fake planes, button controls) | Works. 56 simulated-browser checks pass; desktop browser preview inspected. Tablet still untested. |
+| Demo mode (fake planes, button controls) | Works. 73 simulated-browser checks pass; desktop browser preview inspected. Tablet still untested. |
 | Live mode (real planes) | Uses the relay below. The map edition has not been tested against real feeds; current deployed configuration was not inspected in this session. See `docs/FINDINGS.md`. |
 | Relay (`worker/`) | Deployed by Nathan but both upstream feeds failed. Local diagnostics update awaits redeployment. 25 mock tests pass in the latest session. Current deployment configuration has not been rechecked. Setup: `docs/RELAY_SETUP.md`. |
 | Route lookup (origin and destination) | Works from a browser (tested 2026-10-19). |
@@ -64,6 +64,12 @@ Map options: `heading=190`, `fov=140` (20 to 180 degrees), `radius=10` (reach in
 
 The geographic basemap needs internet and HTTP/HTTPS hosting. Opening the file directly shows a coordinate grid, aircraft and the wedge, with a basemap-unavailable message. Basemap failures do not disable the aircraft controls. The map uses visible OpenStreetMap attribution, only viewport tiles, default browser caching and an origin-only Referer so bookmark coordinates are not sent in that header. Source: https://operations.osmfoundation.org/policies/tiles/ (checked 2026-10-19). No offline map download is provided.
 
+## Window controls and feed trouble
+
+The window edition now also puts Auto, Single focus, Multi aircraft, Map view, demo buttons and diagnostics inside its top-left hamburger. It closes after 15 seconds idle. Tap the screen or hamburger to wake it; Escape closes it. `debug=1` enables diagnostic logging inside that drawer rather than across the sky.
+
+A relay error shows a short retry message on the wall. Open the hamburger and enable **Show diagnostics** for the HTTP status and any `details` returned by the relay. A 502 still means the live request failed; hiding controls does not repair it. Current relay cause is not yet confirmed, and the Cloudflare Worker was not redeployed in this UI fix.
+
 ## Aircraft views
 
 Auto is selected by default: one eligible aircraft uses single focus; two or more use multi aircraft. Multi shows at most the three nearest aircraft inside the same window, distance and altitude filters. Each has a callsign in the sky and a matching colour on its information card. Single focus keeps the current aircraft while it remains eligible.
@@ -88,7 +94,7 @@ Use the Auto, Single focus or Multi aircraft buttons to change the choice. `?vie
 | `worker/worker.js` | The relay: a small Cloudflare Worker. `worker/wrangler.jsonc` is its config. |
 | `worker/test_worker.mjs` | Tests for the relay with a mocked feed (25 checks, nothing to install). |
 | `tests/test_windowjet.js` | Unit tests for the logic (61 checks). |
-| `tests/dom_test.js` | Runs the page in a simulated browser and clicks every demo button (56 checks). |
+| `tests/dom_test.js` | Runs the page in a simulated browser and clicks every demo button (73 checks). |
 
 ## Running the tests
 
@@ -110,7 +116,7 @@ node tests/map_dom_test.js ~/jsdom-env/node_modules/jsdom map.html
 
 The relay tests need nothing installed: `node worker/test_worker.mjs`.
 
-Expected as of v0.7: 61 window logic, 56 window page, 25 relay, 50 map logic and 70 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
+Expected as of v0.8: 61 window logic, 73 window page, 25 relay, 50 map logic and 70 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
 
 ## Hardware and hosting plan
 

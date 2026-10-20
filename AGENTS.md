@@ -3,7 +3,7 @@
 This file is tool neutral. Any assistant (Claude, ChatGPT, Gemini, a local model, a coding agent) should be able to continue the project from this file alone, plus `LOG.md` and `docs/FINDINGS.md`.
 
 Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
-Change: v0.7 / map v0.2 adds browser preferences, hamburger controls/views and idle hiding; prior rules retained.
+Change: v0.8 extends hamburger/idle controls to the window view and keeps relay diagnostics in its drawer; prior rules retained.
 
 ## 1. Read order
 
@@ -76,7 +76,7 @@ Relay (`worker/worker.js`, a Cloudflare Worker): serves `GET /v2/point/{lat}/{lo
 
 ```
 node tests/test_windowjet.js index.html          # expect: 61 passed, 0 failed
-node tests/dom_test.js <path-to-jsdom> index.html  # expect: 56 passed, 0 failed
+node tests/dom_test.js <path-to-jsdom> index.html  # expect: 73 passed, 0 failed
 node worker/test_worker.mjs                        # expect: 25 passed, 0 failed (needs nothing installed)
 node tests/test_map.js map.html                     # expect: 50 passed, 0 failed
 node tests/map_dom_test.js <path-to-jsdom> map.html  # expect: 70 passed, 0 failed
@@ -86,7 +86,7 @@ node tests/map_dom_test.js <path-to-jsdom> map.html  # expect: 70 passed, 0 fail
 
 ## 7. Current state and next steps (as of 2026-10-19)
 
-State: v0.7, with a separate map edition v0.2, published in commit 5acc488cd5cb1307ae0ee011304fd248c08f965c. Hosted hamburger and Save view controls verified on desktop. `map.html` has a geographic basemap and an editable forward viewing wedge. Its count includes only airborne aircraft in that wedge, at any altitude, without a three-aircraft cap. Both editions use the same relay URL option. Map controls and geometry have 50 logic and 70 page checks; window page checks now total 56. Demo mode supports automatic single/multi view switching, up to three eligible aircraft and helicopter silhouettes. `?view=auto|single|multi` sets the starting choice; Auto is the default. Multi mode shows the three nearest eligible aircraft; single focus retains the current valid aircraft. Hosted at https://luxcoder24.github.io/flight-dashboard/ (window and map editions published 2026-10-19; the public map loaded successfully, and the latest LOG.md records deployment details). Live mode needs a relay because the public plane-position feeds (adsb.lol, adsb.one, adsb.fi, airplanes.live) send no CORS header, so a web page cannot call them (tested 2026-10-19; details in `docs/FINDINGS.md`). The route lookup (adsbdb) does work from a browser. The relay (`worker/`) is written, passes 25 mock tests and compiles under Cloudflare's tool (`wrangler deploy --dry-run`), and was deployed by Nathan, but returned 502 because both feeds failed (relay session in LOG.md). The local diagnostic details update awaits redeployment; why the feeds failed remains UNVERIFIED. Settled: GitHub user `luxcoder24`, repo `flight-dashboard`. Nathan's window coordinates were given in chat on 2026-10-19 and are kept out of the files on purpose (rule 11).
+State: v0.8, with a separate map edition v0.2, published in commit 5acc488cd5cb1307ae0ee011304fd248c08f965c. Hosted hamburger and Save view controls verified on desktop. `map.html` has a geographic basemap and an editable forward viewing wedge. Its count includes only airborne aircraft in that wedge, at any altitude, without a three-aircraft cap. Both editions use the same relay URL option. Map controls and geometry have 50 logic and 70 page checks; window page checks now total 73. Both editions now use a hamburger for their controls with 15-second idle hiding. Window diagnostics stay in the drawer, and feed errors use a short retry message. Relay failure remains a separate unresolved service issue. Demo mode supports automatic single/multi view switching, up to three eligible aircraft and helicopter silhouettes. `?view=auto|single|multi` sets the starting choice; Auto is the default. Multi mode shows the three nearest eligible aircraft; single focus retains the current valid aircraft. Hosted at https://luxcoder24.github.io/flight-dashboard/ (window and map editions published 2026-10-19; the public map loaded successfully, and the latest LOG.md records deployment details). Live mode needs a relay because the public plane-position feeds (adsb.lol, adsb.one, adsb.fi, airplanes.live) send no CORS header, so a web page cannot call them (tested 2026-10-19; details in `docs/FINDINGS.md`). The route lookup (adsbdb) does work from a browser. The relay (`worker/`) is written, passes 25 mock tests and compiles under Cloudflare's tool (`wrangler deploy --dry-run`), and was deployed by Nathan, but returned 502 because both feeds failed (relay session in LOG.md). The local diagnostic details update awaits redeployment; why the feeds failed remains UNVERIFIED. Settled: GitHub user `luxcoder24`, repo `flight-dashboard`. Nathan's window coordinates were given in chat on 2026-10-19 and are kept out of the files on purpose (rule 11).
 
 Next steps, in priority order:
 

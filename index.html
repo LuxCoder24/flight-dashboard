@@ -59,6 +59,11 @@
               and all view links, and 15-second idle hiding. Updated map tests and project docs.
               Window application behaviour unchanged. Map v0.2 published and hosted controls verified; see LOG.md.
 
+  2026-10-19  v0.8  GPT-6 (OpenAI), directed by Nathan
+              Applied the hamburger and 15-second idle hiding to the window edition too.
+              Moved view/demo controls and diagnostics into its drawer. Clear feed-error text
+              stays on the wall; relay details are available inside the menu. Updated tests/docs.
+
   NOT VERIFIED AGAINST LIVE DATA (the build sandbox could not reach the APIs):
    - exact JSON field names returned by api.adsb.lol (written from the documented
      ADSBExchange v2 format: ac[], hex, flight, t, alt_baro, gs, track, baro_rate, lat, lon)
@@ -170,9 +175,36 @@
   #sky.multi #plane3 .skyLabel, .aircraftCard:nth-child(3) strong { color: #ceb6ff; }
   #sky.multi #plane2 .skyLabel { top: auto; bottom: 100%; }
 
+  #windowMenuButton { position: fixed; top: 1.5vmin; left: 1.5vmin; z-index: 30; font: inherit; font-size: 24px; min-width: 44px; min-height: 44px; padding: 6px 11px; border: 1px solid #42536a; border-radius: 1vmin; background: #102335; color: #fff; }
+  #windowMenu { display: none; position: fixed; top: 68px; bottom: 12px; left: 1.5vmin; z-index: 25; width: 340px; max-width: 94%; overflow-y: auto; padding: 20px; border: 1px solid #42536a; border-radius: 12px; background: #0d1826; box-shadow: 0 8px 35px rgba(0,0,0,.5); }
+  .windowMenuHead { display: -webkit-flex; display: flex; -webkit-justify-content: space-between; justify-content: space-between; -webkit-align-items: center; align-items: center; font-size: 17px; margin-bottom: 18px; }
+  #windowMenuClose { background: #172538; color: #fff; border: 1px solid #42536a; border-radius: 6px; padding: 5px 10px; font-size: 20px; }
+  #viewBar { position: static; margin-bottom: 18px; }
+  #viewBar button, #mapLink { display: block; width: 100%; margin: 7px 0; padding: 11px; font-size: 16px; border: 1px solid #42536a; border-radius: 8px; text-align: left; }
+  #demoBar { position: static; margin: 12px 0; }
+  #demoBar button { font-size: 13px; border-width: 1px; padding: 9px 10px; margin: 0 5px 6px 0; border-radius: 8px; }
+  #debug { position: static; font-size: 12px; padding: 8px; max-height: 210px; overflow: auto; }
+  .diagnosticsLabel { display: block; font-size: 14px; margin-top: 18px; }
+  #feedInfo { font-size: 13px; line-height: 1.5; color: #a7b7c7; word-wrap: break-word; margin: 10px 0; }
+  body.windowUiHidden #windowMenuButton { opacity: .35; }
+  body.windowUiHidden #windowMenuButton:focus { opacity: 1; }
+  #windowMenuButton:focus, #windowMenu button:focus, #windowMenu a:focus { outline: 3px solid #79e2c3; }
 </style>
 </head>
 <body>
+<button id="windowMenuButton" type="button" aria-label="Open settings and views" aria-controls="windowMenu" aria-expanded="false">☰</button>
+<aside id="windowMenu" aria-label="Settings and views" aria-hidden="true">
+  <div class="windowMenuHead"><strong>Settings and views</strong><button id="windowMenuClose" type="button" aria-label="Close settings">×</button></div>
+    <div id="viewBar" role="group" aria-label="Aircraft view">
+      <button type="button" data-view="auto">Auto</button>
+      <button type="button" data-view="single">Single focus</button>
+      <button type="button" data-view="multi">Multi aircraft</button>
+      <a id="mapLink" href="map.html">Map view ↗</a>
+    </div>
+  <div id="demoSlot"></div>
+  <label class="diagnosticsLabel"><input id="debugToggle" type="checkbox"> Show diagnostics</label>
+  <p id="feedInfo" role="status"></p><div id="debug"></div>
+</aside>
 <div id="app">
   <div id="sky" class="idle">
     <div id="ground"></div>
@@ -196,14 +228,7 @@
       </svg>
       <span class="skyLabel"></span>
     </div>
-    <div id="viewBar" role="group" aria-label="Aircraft view">
-      <button type="button" data-view="auto">Auto</button>
-      <button type="button" data-view="single">Single focus</button>
-      <button type="button" data-view="multi">Multi aircraft</button>
-      <a id="mapLink" href="map.html">Map view ↗</a>
-    </div>
     <div id="banner"></div>
-    <div id="debug"></div>
   </div>
   <div id="panel" class="idle">
     <div id="head"><div><span id="callsign">-</span><span id="chip"></span></div><div id="airline"></div></div>
@@ -407,6 +432,7 @@
 
   var sky = $('sky'), panel = $('panel'), plane = $('plane'), trailBox = $('trail');
   var aircraft = [], nearbyCount = 0, lastOk = 0, lastErr = '', featured = null, dir = 1;
+  var relayDetails = '';
   var routeCache = {}, routePending = {}, lastSeenLabel = '';
   var skyW = 1, skyH = 1, dots = [], trailPts = [], lastTrail = 0, lastPick = 0, lastText = 0, apiIdx = 0;
 
@@ -414,6 +440,31 @@
   for (pi = 1; pi < 3; pi++) {
     var clone = plane.cloneNode(true); clone.id = 'plane' + (pi + 1); sky.appendChild(clone); sprites.push(clone);
   }
+  var windowMenuOpen = false, windowIdleTimer = 0;
+  function windowUi(open) {
+    document.body.className = '';
+    if (typeof open === 'boolean') {
+      windowMenuOpen = open; $('windowMenu').style.display = open ? 'block' : 'none';
+      $('windowMenu').setAttribute('aria-hidden', open ? 'false' : 'true');
+      $('windowMenuButton').setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    window.clearTimeout(windowIdleTimer);
+    windowIdleTimer = window.setTimeout(function () {
+      windowMenuOpen = false; $('windowMenu').style.display = 'none';
+      $('windowMenu').setAttribute('aria-hidden', 'true'); $('windowMenuButton').setAttribute('aria-expanded', 'false');
+      if ($('windowMenu').contains(document.activeElement)) { $('windowMenuButton').focus(); }
+      document.body.className = 'windowUiHidden';
+    }, 15000);
+  }
+  $('windowMenuButton').onclick = function (e) { if (e) { e.stopPropagation(); } windowUi(!windowMenuOpen); };
+  $('windowMenuClose').onclick = function () { windowUi(false); $('windowMenuButton').focus(); };
+  $('windowMenu').addEventListener('click', function (e) { e.stopPropagation(); });
+  document.addEventListener('mousedown', function () { windowUi(); });
+  document.addEventListener('touchstart', function () { windowUi(); }, false);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' || e.keyCode === 27) { windowUi(false); $('windowMenuButton').focus(); } else { windowUi(); } });
+  $('debugToggle').checked = CONFIG.DEBUG;
+  $('debugToggle').onchange = function () { CONFIG.DEBUG = this.checked; $('debug').style.display = this.checked ? 'block' : 'none'; windowUi(); };
+  windowUi(false);
   var viewButtons = $('viewBar').getElementsByTagName('button');
   function updateViewButtons() {
     for (var i = 0; i < viewButtons.length; i++) {
@@ -425,7 +476,7 @@
   for (pi = 0; pi < viewButtons.length; pi++) {
     viewButtons[pi].onclick = function (e) {
       if (e && e.stopPropagation) { e.stopPropagation(); }
-      CONFIG.VIEW = this.getAttribute('data-view'); lastPick = 0; lastText = 0; updateViewButtons();
+      CONFIG.VIEW = this.getAttribute('data-view'); lastPick = 0; lastText = 0; updateViewButtons(); windowUi(false);
     };
   }
   updateViewButtons();
@@ -511,13 +562,13 @@
       speedBtns.push(b); if (s === demoSpeed) { b.className = 'on'; }
     }
     addSpeed(1); addSpeed(3); addSpeed(6);
-    sky.appendChild(bar);
+    $('demoSlot').appendChild(bar);
   }
 
   function handleList(list) {
     var now = Date.now(), out = [], i, a;
     for (i = 0; i < list.length; i++) { a = normalize(list[i], now); if (a) { out.push(a); } }
-    aircraft = out; nearbyCount = out.length; lastOk = now; lastErr = '';
+    aircraft = out; nearbyCount = out.length; lastOk = now; lastErr = ''; relayDetails = '';
     dbg('ok: ' + list.length + ' raw, ' + out.length + ' airborne');
   }
 
@@ -530,7 +581,8 @@
         handleList(list);
       } else {
         lastErr = 'HTTP ' + status + ' from ' + CONFIG.API_BASES[apiIdx % CONFIG.API_BASES.length];
-        dbg('fail: ' + lastErr);
+        relayDetails = json && json.details && typeof json.details.join === 'function' ? json.details.join('; ') : '';
+        dbg('fail: ' + lastErr + (relayDetails ? ' | ' + relayDetails : ''));
         apiIdx++;   // try the next provider on the next poll
       }
     });
@@ -613,11 +665,12 @@
   function renderIdle(now) {
     var ago = lastOk ? Math.round((now - lastOk) / 1000) : -1;
     var sub = nearbyCount + ' aircraft within ' + CONFIG.RADIUS_NM + ' nm';
-    if (lastErr) { sub = 'Data trouble: ' + lastErr; }
+    if (lastErr) { sub = 'Live feed unavailable. Retrying…'; }
     $('idleSub').textContent = (lastSeenLabel ? 'Last seen: ' + lastSeenLabel + '  |  ' : '') + sub;
   }
 
   function updateStatus(now) {
+    $('feedInfo').textContent = CONFIG.DEMO ? 'Demo aircraft' : (lastErr ? lastErr + (relayDetails ? ' | ' + relayDetails : '') : (lastOk ? 'Live feed connected' : 'Connecting to live feed…'));
     var st = $('status');
     st.className = lastErr && (!lastOk || now - lastOk > 20000) ? 'err' : (lastOk && now - lastOk < 20000 ? 'ok' : 'stale');
   }

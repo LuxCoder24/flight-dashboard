@@ -69,3 +69,10 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 - tests/test_map.js: 50 checks. tests/map_dom_test.js: 70 checks, including reload restoration, stale bookmark priority, live relay restoration, malformed/blocked storage, idle/wake behaviour, focus and view navigation. Existing window/relay suites retained (61, 56, 25).
 - index.html header, README.md, AGENTS.md, docs/FINDINGS.md and LOG.md updated. Captured docs/previews/map-menu-v0.2.png by GPT-6 (OpenAI), directed by Nathan, using the public demo placeholder. No real location saved in project files.
 - Publication verified: commit 5acc488cd5cb1307ae0ee011304fd248c08f965c deployed successfully to the existing GitHub Pages map URL. Public browser verified hamburger controls, Save view and all view links. All 262 checks passed.
+
+## v0.8: window-view controls correction (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- index.html: the window edition now has the same hamburger and 15-second idle behaviour as the map. View buttons, Map view link, demo controls and diagnostics moved into a drawer; Escape and focus handling included. The wall shows a short live-feed retry message, while the menu preserves HTTP status and any relay details. No Worker source/configuration changes.
+- tests/dom_test.js now has 73 checks covering window drawer, idle/wake, diagnostics and feed recovery. Full totals: 61 window logic, 73 window page, 25 relay, 50 map logic and 70 map page checks; both pages pass ES5 parsing.
+- README.md, AGENTS.md, docs/FINDINGS.md and LOG.md updated. Captured docs/previews/window-menu-v0.8.png by GPT-6 (OpenAI), directed by Nathan, using fake demo aircraft at the public placeholder.
+- Service diagnosis remains inconclusive: the configured Worker rejected the diagnostic Python client with a Cloudflare 403, while the user's screenshot shows 502. Direct adsb.lol returned 200 but no browser CORS header; adsb.one returned 403. These results do not prove why the tablet relay failed.
