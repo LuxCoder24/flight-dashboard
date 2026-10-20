@@ -60,3 +60,4 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 Written by GPT-6 (OpenAI), directed by Nathan.
 - Prepared map.html, the companion window edition, tests and project documentation for publication to LuxCoder24/flight-dashboard using the connected GitHub tool.
 - index.html header, README.md, AGENTS.md and LOG.md record the deployment handoff. No application behaviour changes. See LOG.md for the verified publication outcome.
+- Publication confirmed: source commit 85e0bcd1befb4eaf339e28fb15f64eafb8fd7e13 reached main and the hosted map loaded with its controls and demo aircraft. README, AGENTS, FINDINGS and LOG record the verified result.

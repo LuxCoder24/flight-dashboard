@@ -83,3 +83,10 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 - TESTED: existing suites pass: 61 window logic, 56 window page and 25 relay mock checks. No relay changes were made.
 - UNVERIFIED: the new map's live operation against real feeds, touch gestures/performance on the tablet, cloud sync completion and deployment. Reach is capped below the relay limit to allow coordinate-rounding margin; exact feed inclusion at boundary positions remains dependent on the upstream.
 - Design: Nathan clarified that pickup should be a forward-facing wedge rather than a circle. The viewport can be moved independently of the viewpoint; the wedge controls determine selection. Map mode has no window altitude ceiling or three-aircraft cap. Unknown aircraft types retain the normal aircraft icon.
+
+## 7. GitHub publication (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- TESTED: connected GitHub tool successfully created repository objects and updated main without force from the inspected parent. Published source commit: https://github.com/LuxCoder24/flight-dashboard/commit/85e0bcd1befb4eaf339e28fb15f64eafb8fd7e13 . The uploaded map source read back identically to the prepared local source.
+- TESTED: the public page https://luxcoder24.github.io/flight-dashboard/map.html loaded in a desktop browser with the viewing wedge controls and three simulated aircraft. This establishes public map publication, not real-tablet support or real-feed operation.
+- TESTED: fresh publication rerun passed all 217 checks: 61 window logic, 56 window page, 25 relay mocks, 35 map logic and 40 map page checks.
+- No accounts were created, no credentials handled or stored, and no home coordinates were added. Existing GitHub connection permissions were sufficient for this upload.
