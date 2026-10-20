@@ -77,17 +77,17 @@ Relay (`worker/worker.js`, a Cloudflare Worker): serves `GET /v2/point/{lat}/{lo
 
 ```
 node tests/test_windowjet.js index.html          # expect: 77 passed, 0 failed
-node tests/dom_test.js <path-to-jsdom> index.html  # expect: 87 passed, 0 failed
+node tests/dom_test.js <path-to-jsdom> index.html  # expect: 90 passed, 0 failed
 node worker/test_worker.mjs                        # expect: 25 passed, 0 failed (needs nothing installed)
 node tests/test_map.js map.html                     # expect: 55 passed, 0 failed
-node tests/map_dom_test.js <path-to-jsdom> map.html  # expect: 76 passed, 0 failed
+node tests/map_dom_test.js <path-to-jsdom> map.html  # expect: 79 passed, 0 failed
 ```
 
 `jsdom` must be installed first (see `README.md`). jsdom has no layout engine, so these tests prove logic and wiring, not appearance. If you add features, add tests, and update the expected counts here and in `README.md`.
 
 ## 7. Current state and next steps (as of 2026-10-19)
 
-State: v0.10 prepared: clock trails clear, simple flat aircraft/helicopter icons, refreshed typography and ADSB.lol listed itineraries. The public static UAL2224 route file returned 200 with CORS wildcard and PHX-IAH-DCA; dated active legs remain unverified. Main display uses the validated saved map wedge and reach, no legacy altitude ceiling, 60-second freshness and up to three aircraft. Setup is map.html, reached through the hamburger. Both pages retain failure cooldown and hidden-tab polling pause from v0.9.1 (published c4ee62d541181bd77b2c111b45e5b760ae1672ff). Nathan's screenshot showed adsb.lol 429 and adsb.one 403 inside relay 502; upstream recovery remains unverified. No Worker deployment occurred here. Demo is the default without a location, unless validated saved browser preferences supply live mode; demo=1 always forces simulation. View choices remain Auto, single focus and multi, with at most three aircraft. Hosted at https://luxcoder24.github.io/flight-dashboard/ . Test counts: 77 window logic, 87 window page, 25 relay mocks, 55 map logic and 76 map page, total 320. Check latest LOG.md for publication status. All real location preferences stay in the browser and out of source, docs and logs.
+State: v0.10 prepared: clock trails clear, simple flat aircraft/helicopter icons, refreshed typography and ADSB.lol listed itineraries. The public static UAL2224 route file returned 200 with CORS wildcard and PHX-IAH-DCA; dated active legs remain unverified. Main display uses the validated saved map wedge and reach, no legacy altitude ceiling, 60-second freshness and up to three aircraft. Setup is map.html, reached through the hamburger. Both pages retain failure cooldown and hidden-tab polling pause from v0.9.1 (published c4ee62d541181bd77b2c111b45e5b760ae1672ff). Nathan's screenshot showed adsb.lol 429 and adsb.one 403 inside relay 502; upstream recovery remains unverified. No Worker deployment occurred here. Demo is the default without a location, unless validated saved browser preferences supply live mode; demo=1 always forces simulation. View choices remain Auto, single focus and multi, with at most three aircraft. Hosted at https://luxcoder24.github.io/flight-dashboard/ . Test counts: 77 window logic, 90 window page, 25 relay mocks, 55 map logic and 79 map page, total 326. Check latest LOG.md for publication status. All real location preferences stay in the browser and out of source, docs and logs.
 
 Next steps, in priority order:
 
@@ -133,3 +133,5 @@ Next: <what should happen next>
 2026-10-19, GPT-6 (OpenAI), directed by Nathan: TEMPORARY MAINTENANCE enabled in both pages at Nathan's request. Browser initialization and live polling stop; saved preferences stay intact. Resume by changing MAINTENANCE_ENABLED true to false in index.html and map.html. v0.10 changes remain behind the screen. Tests: node tests/maintenance_test.js <path-to-jsdom>, expect 12 passed. Normal DOM suites disable maintenance only in their fixtures.
 
 2026-10-20, GPT-6 (OpenAI), directed by Nathan: maintenance disabled in index.html and map.html at Nathan's request. Saved viewing zone remains intact. tests/maintenance_test.js now verifies both the optional enabled screen and the resumed production default, 12 checks. Live relay recovery is being checked using public airport coordinates, not the saved private viewpoint.
+
+2026-10-20, GPT-6 (OpenAI), directed by Nathan: Force retry in the display and setup menus makes one immediate position-feed request during cooldown. Pending requests cannot overlap; automatic cooldown remains after failure. Hidden in demo. Full verification: 338 checks, including 12 maintenance, passed.

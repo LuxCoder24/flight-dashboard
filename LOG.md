@@ -239,3 +239,11 @@ Verified: 332 checks passed: 12 maintenance, 77 window logic, 87 window page, 25
 Not verified: Sustained feed reliability, why earlier access refusals cleared, actual dated route legs, or the physical tablet. No private coordinates used and no Worker changes.
 Decisions: Report successful current browser operation without claiming a permanent upstream repair. Saved viewing zone stays intact.
 Next: Nathan refreshes the tablet's existing bookmark and confirms local behaviour.
+
+## 2026-10-20 19:36 (America/New_York): Manual retry for feed diagnostics
+Who: GPT-6 (OpenAI), directed by Nathan
+Did: Added Force retry to index.html and map.html menus; added explicit-retry, cooldown and pending regression coverage in both DOM test files. Updated README.md, AGENTS.md, CHANGELOG.md and index.html header. Reviewed past project chat and findings.
+Verified: 338 checks passed: 77 window logic, 90 window page, 25 relay mocks, 55 map logic, 79 map page, 12 maintenance. Both pages parse as ES5.
+Not verified: Physical tablet behaviour or current upstream availability. No live position requests made. Publication outcome follows.
+Decisions: A manual click bypasses cooldown for one request without clearing shared failure state. Success clears cooldown normally. Hide in demo and disable during pending requests.
+Next: Publish, verify hosted source and refresh the tablet.

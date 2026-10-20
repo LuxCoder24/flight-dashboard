@@ -8,6 +8,9 @@
   Project docs (same folder): README.md, AGENTS.md (LLMs start here), LOG.md, CHANGELOG.md, docs/FINDINGS.md
 
   CHANGE LOG
+  2026-10-20 GPT-6 (OpenAI), directed by Nathan: Force retry in both menus;
+              one immediate position request, pending guard and automatic cooldown retained.
+              DOM regressions, README.md, AGENTS.md, CHANGELOG.md and LOG.md updated.
   2026-10-20 GPT-6 (OpenAI), directed by Nathan: header/docs only, record
               successful live browser check and publication in README.md, AGENTS.md,
               docs/FINDINGS.md, CHANGELOG.md and LOG.md.
@@ -264,6 +267,7 @@
     </div>
   <div id="demoSlot"></div>
   <label class="diagnosticsLabel"><input id="debugToggle" type="checkbox"> Show diagnostics</label>
+  <button id="forceRetry" type="button">Force retry</button>
   <p id="feedInfo" role="status"></p><div id="debug"></div>
 </aside>
 <div id="app">
@@ -684,14 +688,14 @@ function feedRecovered(){retryUntil=0;feedFailures=0;try{window.localStorage.rem
     dbg('ok: ' + list.length + ' raw, ' + out.length + ' airborne');
   }
 
-  function poll() {
+  function poll(force) {
     if (CONFIG.DEMO) { handleList(demoTick()); return; }
     if (document.hidden || feedPending) { return; }
-    if (Date.now() < readCooldown()) { if (!lastErr) { lastErr='Feed cooling down after an earlier failure'; } return; }
-    feedPending=true;
+    if (force !== true && Date.now() < readCooldown()) { if (!lastErr) { lastErr='Feed cooling down after an earlier failure'; } return; }
+    feedPending=true; $('forceRetry').disabled=true;
     var url = CONFIG.API_BASES[apiIdx % CONFIG.API_BASES.length] + '/' + CONFIG.HOME_LAT + '/' + CONFIG.HOME_LON + '/' + CONFIG.RADIUS_NM;
     xhr(url, function (status, json, request) {
-      feedPending=false;
+      feedPending=false; $('forceRetry').disabled=false;
       if (status === 200 && json) {
         var list = json.ac || json.aircraft || [];
         feedRecovered(); handleList(list);
@@ -704,6 +708,9 @@ function feedRecovered(){retryUntil=0;feedFailures=0;try{window.localStorage.rem
       }
     });
   }
+
+  $('forceRetry').style.display=CONFIG.DEMO?'none':'';
+  $('forceRetry').onclick=function(){poll(true);updateStatus(Date.now());};
 
   function ensureRoutes() {
     var now=Date.now(), callsign='',i,ac;

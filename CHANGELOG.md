@@ -120,3 +120,8 @@ GPT-6 (OpenAI), directed by Nathan: index.html and map.html maintenance flags ar
 
 ### Resume publication and live result (2026-10-20, documentation/header only)
 GPT-6 (OpenAI), directed by Nathan: index.html header, README.md, AGENTS.md, docs/FINDINGS.md and LOG.md record successful Pages deployment of 4baf6d0 and normal live browser response (19 raw records, 8 accepted by airborne filter, 3 displayed). 332 checks passed. No application script or Worker change in this follow-up.
+
+## 2026-10-20: Manual feed retry
+Written by GPT-6 (OpenAI), directed by Nathan.
+- Added Force retry to index.html and map.html menus. Explicit clicks bypass the countdown for one position request; pending guards and automatic backoff remain. Hidden in demo.
+- Updated both DOM suites, expected counts in README.md and AGENTS.md, index.html header and LOG.md. All 338 checks pass; ES5 parsing passes for both pages.

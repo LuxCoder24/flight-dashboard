@@ -1,3 +1,4 @@
+// 2026-10-20 GPT-6 (OpenAI), directed by Nathan: manual retry and automatic cooldown regressions.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: normal-app suite disables temporary maintenance in its fixture; maintenance_test.js verifies real default.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: fake-clock cooldown and hidden-tab checks.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: setup link shares zone reach.
@@ -18,7 +19,7 @@ function load(search,feed,storage){
   w.clearTimeout=function(id){delete timeouts[id];};
   if(storage&&storage.blocked){Object.defineProperty(w,'localStorage',{get:function(){throw new Error('Storage blocked');}});}
   else if(storage&&typeof storage.raw==='string'){w.localStorage.setItem('windowjet.map.view.v1',storage.raw);}
-  w.XMLHttpRequest=function(){this.open=function(m,url){urls.push(url);};this.send=function(){this.status=feed&&feed.status||200;this.readyState=4;this.responseText=JSON.stringify(feed&&feed.body||{ac:[]});this.onreadystatechange();};};
+  w.XMLHttpRequest=function(){this.open=function(m,url){urls.push(url);};this.send=function(){if(feed&&feed.pending){return;}this.status=feed&&feed.status||200;this.readyState=4;this.responseText=JSON.stringify(feed&&feed.body||{ac:[]});this.onreadystatechange();};};
  }});
  return {w:dom.window,d:dom.window.document,errors:errors,urls:urls,advance:function(ms){clockOffset+=ms;},tick:function(){timers.forEach(function(fn){fn();});},idle:function(){Object.keys(timeouts).forEach(function(id){var t=timeouts[id];if(t&&t.ms===15000){delete timeouts[id];t.fn();}});},close:function(){dom.window.close();}};
 }
@@ -74,7 +75,10 @@ s=load('lat=38&lon=-77&api=https://relay.example',{status:502,body:{details:['ad
 s.tick();s.tick();ok(s.urls.length===1,'map does not poll during wrapped rate-limit cooldown');
 ok(/Retrying in/.test(el(s,'feedStatus').textContent),'map explains cooldown countdown');
 change(s,'heading',90);ok(s.urls.length===1,'changing wedge does not bypass feed cooldown');
-s.advance(61000);s.tick();ok(s.urls.length===2,'map retries after cooldown expires');
+el(s,'forceRetry').click();ok(s.urls.length===2,'map manual retry bypasses cooldown immediately');
+s.tick();ok(s.urls.length===2,'map manual failure preserves automatic cooldown');
+s.advance(121000);s.tick();ok(s.urls.length===3,'map retries after cooldown expires');
 s.close();
 s=load('lat=38&lon=-77',{body:{ac:[]}});Object.defineProperty(s.d,'hidden',{value:true,configurable:true});s.tick();ok(s.urls.length===1,'hidden setup tab stops live polling');s.close();
+s=load('lat=38&lon=-77',{pending:true});el(s,'forceRetry').onclick();ok(s.urls.length===1&&el(s,'forceRetry').disabled,'map manual retry cannot overlap pending request');s.close();
 console.log(passes+' passed, '+fails+' failed');process.exitCode=fails?1:0;

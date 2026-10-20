@@ -1,8 +1,8 @@
 # plane-dashboard (WindowJet)
 
-A DIY replica of [JetClock](https://jetclock.io) (a live "what plane is above me" display). It runs on a Galaxy Tab mounted on the wall between two windows, and shows the plane flying past as a small animation, with big, clean flight info underneath.
+A DIY replica of [JetClock](https://jetclock.io), displaying nearby aircraft as an animation with readable flight information.
 
-Owner: Nathan. Planes departing DCA (Washington National) fly past his window, which faces about 190 degrees (almost due south).
+
 
 Last updated: 2026-10-20 by GPT-6 (OpenAI), directed by Nathan.
 Change: v0.9 uses the map to set up the main display viewing zone; saved wedge and reach are shared.
@@ -82,7 +82,7 @@ Use the Auto, Single focus or Multi aircraft buttons to change the choice. `?vie
 |---|---|
 | `map.html` | Separate single-file, ES5 map edition with adjustable viewing wedge. |
 | `tests/test_map.js` | 55 map geometry and filtering checks. |
-| `tests/map_dom_test.js` | 76 map control and relay-wiring checks. |
+| `tests/map_dom_test.js` | 79 map control and relay-wiring checks. |
 | `docs/previews/map-menu-v0.2.png` | Desktop preview of the map settings/views drawer. |
 | `docs/previews/map-wedge-v0.1.png` | Desktop demo preview, public placeholder location. |
 | `index.html` | The whole app in one file (HTML, CSS, JavaScript). GitHub Pages needs it at the root. |
@@ -116,11 +116,11 @@ node tests/map_dom_test.js ~/jsdom-env/node_modules/jsdom map.html
 
 The relay tests need nothing installed: `node worker/test_worker.mjs`.
 
-Expected as of v0.10: 77 window logic, 87 window page, 25 relay, 55 map logic and 76 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
+Expected as of v0.10: 77 window logic, 90 window page, 25 relay, 55 map logic and 79 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
 
 ## Hardware and hosting plan
 
-- Display: Samsung Galaxy Tab A6 (exact model and Android version not yet confirmed), wall mounted.
+- Compatibility target: older browsers supporting ES5. Actual device/browser support remains unverified.
 - Hosting: GitHub Pages at https://luxcoder24.github.io/flight-dashboard/ (static, free, live as of 2026-10-19). GitHub Pages cannot run server code.
 - Live data: needs a relay because the plane feeds do not allow requests from web pages. The relay is a Cloudflare Worker (`worker/worker.js`), deployed but returning upstream failures; see the latest LOG entry for the diagnostic redeployment step. See `docs/RELAY_SETUP.md`.
 
@@ -139,3 +139,5 @@ Read `AGENTS.md`. Short version: sign every edit (who directed, who wrote, date)
 2026-10-19, GPT-6 (OpenAI), directed by Nathan: TEMPORARY MAINTENANCE enabled in both pages at Nathan's request. Browser initialization and live polling stop; saved preferences stay intact. Resume by changing MAINTENANCE_ENABLED true to false in index.html and map.html. v0.10 changes remain behind the screen. Tests: node tests/maintenance_test.js <path-to-jsdom>, expect 8 passed. Normal DOM suites disable maintenance only in their fixtures.
 
 2026-10-20, GPT-6 (OpenAI), directed by Nathan: maintenance disabled in index.html and map.html at Nathan's request. Saved viewing zone remains intact. tests/maintenance_test.js now verifies both the optional enabled screen and the resumed production default, 12 checks. Live relay recovery is being checked using public airport coordinates, not the saved private viewpoint.
+
+2026-10-20, GPT-6 (OpenAI), directed by Nathan: Force retry in the display and setup menus makes one immediate position-feed request during cooldown. Pending requests cannot overlap; automatic cooldown remains after failure. Hidden in demo. Full verification: 338 checks, including 12 maintenance, passed.

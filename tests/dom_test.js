@@ -1,3 +1,4 @@
+// 2026-10-20 GPT-6 (OpenAI), directed by Nathan: explicit retry bypass and recovery regressions.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: normal-app suite disables temporary maintenance in its fixture; maintenance_test.js verifies real default.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: idle trail cleanup and ADSB.lol listed-route checks.
 // 2026-10-19 GPT-6 (OpenAI), directed by Nathan: cooldown request-count regression.
@@ -210,8 +211,12 @@ function btn(label) {
   ok(wd.getElementById('debug').style.display==='none','diagnostics can be disabled');
   windowPoll();windowPoll();ok(windowRequests===1,'failed feed does not repeat requests during cooldown');
   ok(JSON.parse(dom8.window.localStorage.getItem('windowjet.feed.retry.v1')).until>dom8.window.Date.now(),'cooldown persists for setup and reload');
-  replyStatus=200;replyBody={ac:[]};windowClockOffset=61000;windowPoll();await sleep(700);
-  ok(windowRequests===2&&dom8.window.localStorage.getItem('windowjet.feed.retry.v1')===null,'success after cooldown clears persisted failure state');
+  wd.getElementById('forceRetry').click();
+  ok(windowRequests===2,'manual retry immediately bypasses cooldown');
+  windowPoll();ok(windowRequests===2,'manual failure preserves automatic cooldown');
+  replyStatus=200;replyBody={ac:[]};wd.getElementById('forceRetry').click();await sleep(700);
+  ok(windowRequests===3,'manual retry can recover during cooldown');
+  ok(windowRequests===3&&dom8.window.localStorage.getItem('windowjet.feed.retry.v1')===null,'success after cooldown clears persisted failure state');
   ok(wd.getElementById('feedInfo').textContent==='Live feed connected','feed recovery clears error diagnostics');
   ok(wd.getElementById('idleSub').textContent.indexOf('Retrying')===-1,'feed recovery clears wall error');
   ok(wd.getElementById('idleSub').textContent.indexOf('none match this window')!==-1 && wd.getElementById('idleSub').textContent.indexOf('Limits:')!==-1,'idle distinguishes nearby count from window eligibility');
