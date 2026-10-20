@@ -5,13 +5,13 @@ A DIY replica of [JetClock](https://jetclock.io) (a live "what plane is above me
 Owner: Nathan. Planes departing DCA (Washington National) fly past his window, which faces about 190 degrees (almost due south).
 
 Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
-Change: v0.6 adds a separate map edition with an adjustable viewing wedge and map tests.
+Change: v0.7 / map v0.2 adds browser-saved views, a settings/views hamburger and 15-second idle hiding.
 
-## Status (v0.6, map edition v0.1)
+## Status (v0.7, map edition v0.2)
 
 | Part | State |
 |---|---|
-| Map edition (`map.html`) | Separate geographic map with a selectable viewing wedge, demo/live modes and aircraft details. 35 geometry and 40 page checks pass; desktop map preview inspected. |
+| Map edition (`map.html`) | Separate geographic map with a selectable viewing wedge, demo/live modes and aircraft details. 50 geometry and 70 page checks pass; desktop map preview inspected. |
 | Demo mode (fake planes, button controls) | Works. 56 simulated-browser checks pass; desktop browser preview inspected. Tablet still untested. |
 | Live mode (real planes) | Uses the relay below. The map edition has not been tested against real feeds; current deployed configuration was not inspected in this session. See `docs/FINDINGS.md`. |
 | Relay (`worker/`) | Deployed by Nathan but both upstream feeds failed. Local diagnostics update awaits redeployment. 25 mock tests pass in the latest session. Current deployment configuration has not been rechecked. Setup: `docs/RELAY_SETUP.md`. |
@@ -43,18 +43,22 @@ Options (add to the page address, join with `&`):
 - Window edition: https://luxcoder24.github.io/flight-dashboard/
 - Map edition: https://luxcoder24.github.io/flight-dashboard/map.html
 
-Both editions were published and the public map page was opened successfully on 2026-10-19. The source publication commit is 85e0bcd1befb4eaf339e28fb15f64eafb8fd7e13. Opening the map without options starts the demo. To use live data, preserve the `lat`, `lon` and `api` options from the tablet bookmark while changing its path to `/flight-dashboard/map.html`. Keep coordinates in the bookmark only.
+Both editions were published and the public map page was opened successfully on 2026-10-19. The source publication commit is 85e0bcd1befb4eaf339e28fb15f64eafb8fd7e13. Opening the map without options restores a saved view on this browser, or starts the demo if none is saved. To use live data, preserve the `lat`, `lon` and `api` options from the tablet bookmark while changing its path to `/flight-dashboard/map.html`. Keep coordinates in the bookmark only.
 
 ## Map edition
 
 Use **Map view** in the window page, or open `map.html` on the same hosted website. The link carries the current location and relay options. For the tablet bookmark, replace `index.html` with `map.html` (or append `map.html` after the website's trailing slash), keeping the existing address options.
 
-1. Tap **Choose zone**, then tap your viewpoint on the map.
+1. Open the **hamburger menu** at the top left. Tap **Choose zone**, then tap your viewpoint on the map.
 2. Adjust **Facing direction**, **View width** and **Viewing reach**. The shaded wedge is the actual pickup area. North stays at the top of the map.
 3. Tap an aircraft for callsign, type, altitude and speed. All airborne aircraft within the wedge are shown, with no three-aircraft cap or altitude ceiling. Aircraft behind the viewpoint are excluded.
-4. Tap **Keep zone in this link**, then bookmark the resulting address to retain the viewpoint and wedge. Merely moving the map does not change the pickup zone. Drag to pan; use +, minus and Fit zone to navigate.
+4. Tap **Save view** to remember the viewpoint, wedge, map pan/zoom, units, demo/live mode and relay address on this browser. The same view restores when you reopen the map, including through an older bookmark. Merely moving the map does not change the pickup zone. Drag to pan; use +, minus and Fit zone in the menu to navigate.
 
-No coordinates are saved in project files. No location means a three-aircraft demo around a public airport placeholder. Live data uses the same `api=` relay as the window edition; the deployed relay must allow the hosting origin. Moving the viewpoint changes the live query centre. Old query responses are ignored after a zone change and fixes older than 60 seconds are hidden.
+No coordinates are saved in project files or GitHub. Saved preferences stay in this browser. Without a saved view or a location, the map opens a three-aircraft demo around a public airport placeholder. Live data uses the same `api=` relay as the window edition; the deployed relay must allow the hosting origin. Moving the viewpoint changes the live query centre. Old query responses are ignored after a zone change and fixes older than 60 seconds are hidden.
+
+The menu contains the map controls and links to Map, Window Auto, Single focus and Multi aircraft views. After 15 seconds without input, it closes and the header/map hints hide. Tap the map or hamburger to wake the controls. The hamburger and map attribution remain available. Tapping an aircraft opens its details in the menu; Escape closes the menu.
+
+Saved preferences take priority over old bookmark settings. `useurl=1` deliberately opens the address settings instead; it does not erase the saved view. Explicit `demo=1` always prevents live feed requests. **Forget saved view** removes the browser preference; settings already present in an address still work. Browser data clearing removes the saved view and it does not sync to another browser/device. If storage is blocked/full, saving reports the limitation and offers a bookmark-link fallback without claiming persistence.
 
 Map options: `heading=190`, `fov=140` (20 to 180 degrees), `radius=10` (reach in km by default; nm with `units=aviation`), and `zoom=11`. Reach is limited to 44 km or 24 nm to leave margin inside the relay's 25 nm search cap after coordinate rounding. `demo=1` forces the demo. `tiles=0` disables basemap requests for automated tests.
 
@@ -71,8 +75,9 @@ Use the Auto, Single focus or Multi aircraft buttons to change the choice. `?vie
 | File | What it is |
 |---|---|
 | `map.html` | Separate single-file, ES5 map edition with adjustable viewing wedge. |
-| `tests/test_map.js` | 35 map geometry and filtering checks. |
-| `tests/map_dom_test.js` | 40 map control and relay-wiring checks. |
+| `tests/test_map.js` | 50 map geometry and filtering checks. |
+| `tests/map_dom_test.js` | 70 map control and relay-wiring checks. |
+| `docs/previews/map-menu-v0.2.png` | Desktop preview of the map settings/views drawer. |
 | `docs/previews/map-wedge-v0.1.png` | Desktop demo preview, public placeholder location. |
 | `index.html` | The whole app in one file (HTML, CSS, JavaScript). GitHub Pages needs it at the root. |
 | `AGENTS.md` | Read this first if you are an LLM or coding agent picking the project up. |
@@ -105,7 +110,7 @@ node tests/map_dom_test.js ~/jsdom-env/node_modules/jsdom map.html
 
 The relay tests need nothing installed: `node worker/test_worker.mjs`.
 
-Expected as of v0.6: 61 window logic, 56 window page, 25 relay, 35 map logic and 40 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
+Expected as of v0.7: 61 window logic, 56 window page, 25 relay, 50 map logic and 70 map page checks passed, 0 failed. These tests cannot show how the page looks. They only check logic and wiring.
 
 ## Hardware and hosting plan
 

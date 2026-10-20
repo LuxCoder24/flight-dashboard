@@ -90,3 +90,10 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 - TESTED: the public page https://luxcoder24.github.io/flight-dashboard/map.html loaded in a desktop browser with the viewing wedge controls and three simulated aircraft. This establishes public map publication, not real-tablet support or real-feed operation.
 - TESTED: fresh publication rerun passed all 217 checks: 61 window logic, 56 window page, 25 relay mocks, 35 map logic and 40 map page checks.
 - No accounts were created, no credentials handled or stored, and no home coordinates were added. Existing GitHub connection permissions were sufficient for this upload.
+
+## 8. Persistent map and hidden controls (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- TESTED: map suites pass 50 pure and 70 page checks. Saved settings restore at a bare URL and override an old bookmark. Explicit demo prevents live calls; useurl=1 bypasses a saved view. Corrupt/incomplete preferences fall back safely. Blocked storage reports a bookmark fallback. Browser tests use made-up coordinates only and disable tile requests.
+- TESTED: menu open/close, idle hiding at 15 seconds, waking by map activity, Escape, focus return, map/aircraft preservation and links to Auto/Single/Multi views. Desktop browser screenshots confirm the full-screen map, hamburger drawer and clean idle appearance with attribution retained.
+- Preferences persist in browser localStorage only, plus the existing saved-link fallback; they are not added to source files or synced across devices. Clearing site data removes them. Real tablet persistence, browser restrictions and performance remain UNVERIFIED.
+- docs/previews/map-menu-v0.2.png shows the desktop menu at the public demo placeholder. Publication outcome is recorded in LOG.md.

@@ -61,3 +61,10 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 - Prepared map.html, the companion window edition, tests and project documentation for publication to LuxCoder24/flight-dashboard using the connected GitHub tool.
 - index.html header, README.md, AGENTS.md and LOG.md record the deployment handoff. No application behaviour changes. See LOG.md for the verified publication outcome.
 - Publication confirmed: source commit 85e0bcd1befb4eaf339e28fb15f64eafb8fd7e13 reached main and the hosted map loaded with its controls and demo aircraft. README, AGENTS, FINDINGS and LOG record the verified result.
+
+## v0.7 / map edition v0.2 (2026-10-19)
+Written by GPT-6 (OpenAI), directed by Nathan.
+- map.html: Save view now persists validated viewpoint/wedge, pan/zoom, units, mode and relay preferences in the current browser and restores them on reopening, including old bookmarks. Added deliberate URL override, safe storage-failure fallback and preference removal.
+- Map fills the screen. The hamburger contains the existing map controls and all map/window view links. Header, hints and drawer hide after 15 seconds without input; map activity or the hamburger wakes controls. Attribution stays visible and keyboard focus is returned safely when the drawer closes.
+- tests/test_map.js: 50 checks. tests/map_dom_test.js: 70 checks, including reload restoration, stale bookmark priority, live relay restoration, malformed/blocked storage, idle/wake behaviour, focus and view navigation. Existing window/relay suites retained (61, 56, 25).
+- index.html header, README.md, AGENTS.md, docs/FINDINGS.md and LOG.md updated. Captured docs/previews/map-menu-v0.2.png by GPT-6 (OpenAI), directed by Nathan, using the public demo placeholder. No real location saved in project files.

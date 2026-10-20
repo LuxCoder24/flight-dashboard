@@ -1,4 +1,5 @@
 // Directed by Nathan | Written by GPT-6 (OpenAI) | 2026-10-19
+// Change log: 2026-10-19 v0.2 GPT-6 (OpenAI), directed by Nathan: saved preference validation.
 // Change log: initial map geometry, wedge, freshness, unit and input checks.
 var fs=require('fs'),html=fs.readFileSync(process.argv[2]||'map.html','utf8'),mod={exports:{}};
 new Function('module',html.match(/<script>([\s\S]*)<\/script>/)[1])(mod);
@@ -42,4 +43,24 @@ ok(A.query('?api=https%3A%2F%2Fx.example%2Fa%3Fb%3Dc&heading=0').api==='https://
 ok(A.query('?bad=%ZZ&heading=90').heading==='90','malformed option ignored');
 var dateline={lat:0,lon:179.99},p=A.destination(dateline,90,10000);ok(p.lon<0&&near(A.distance(dateline,p),10000,.01),'destination wraps dateline');
 var edge=A.project(90,180,11);ok(isFinite(edge.y),'projection clamps polar latitude');
+var view={version:1,lat:38,lon:-77,heading:210,fov:80,radius:12,zoom:10,mapLat:38.01,mapLon:-77.02,units:'metric',demo:false,api:'https://relay.example'};
+var options=A.savedOptions(view);
+ok(options&&options.heading==='210'&&options.demo==='0'&&options.api==='https://relay.example','valid saved live settings restored');
+ok(options.maplat==='38.01'&&options.maplon==='-77.02'&&options.zoom==='10','saved map centre and zoom restored');
+ok(A.savedOptions(null)===null&&A.savedOptions({})===null,'missing preferences ignored');
+function bad(field,value){var copy=JSON.parse(JSON.stringify(view));copy[field]=value;return A.savedOptions(copy)===null;}
+ok(bad('version',2),'unknown saved version ignored');
+ok(bad('lat',91)&&bad('lon',181),'invalid saved viewpoint ignored');
+ok(bad('mapLat',90)&&bad('mapLon',-181),'invalid saved map centre ignored');
+ok(bad('heading',360)&&bad('heading',-1),'invalid saved direction ignored');
+ok(bad('fov',0)&&bad('fov',181),'invalid saved width ignored');
+ok(bad('radius',0)&&bad('radius',45),'invalid saved metric reach ignored');
+ok(bad('zoom',2)&&bad('zoom',18)&&bad('zoom',10.5),'invalid saved zoom ignored');
+ok(bad('units','unknown')&&bad('demo','false'),'unknown units and nonboolean mode ignored');
+ok(bad('api','http://insecure.example')&&bad('api',5),'insecure or malformed stored relay ignored');
+ok(bad('lat','38')&&bad('radius','12'),'numeric preference fields require numbers');
+view.units='aviation';view.radius=24;view.demo=true;view.api='';
+ok(A.savedOptions(view).units==='aviation'&&A.savedOptions(view).demo==='1','aviation demo without relay supported');
+view.radius=25;ok(A.savedOptions(view)===null,'saved aviation reach respects relay margin');
+
 console.log(passes+' passed, '+fails+' failed');process.exitCode=fails?1:0;
