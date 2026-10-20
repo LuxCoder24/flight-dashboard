@@ -2,9 +2,6 @@
 
 A DIY replica of [JetClock](https://jetclock.io) (a live "what plane is above me" display). It runs on a Galaxy Tab mounted on the wall between two windows, and shows the plane flying past as a small animation, with big, clean flight info underneath.
 
-Owner: Nathan. Planes departing DCA (Washington National) fly past his window, which faces about 190 degrees (almost due south).
-
-Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
 Change: v0.9 uses the map to set up the main display viewing zone; saved wedge and reach are shared.
 
 ## Status (v0.9.1, zone setup v0.3)
