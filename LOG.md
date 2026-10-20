@@ -231,3 +231,11 @@ Verified: Maintenance smoke now passes 12 checks; the first new assertion incorr
 Not verified: Live relay recovery until the public browser check below; tablet appearance or dated flight legs.
 Decisions: Use public DCA airport coordinates for a bounded normal browser check, never the user's saved viewpoint. Keep cooldowns and safeguards. No Worker or credential changes.
 Next: Publish, wait for Pages, check normal live response, then report exact result.
+
+## 2026-10-20 09:20 (America/New_York): Maintenance off, live relay succeeded
+Who: GPT-6 (OpenAI), directed by Nathan
+Did: Published maintenance-off commit 4baf6d09961ba17315b3b7794f4dd3bc7b306649. Pages run 39429282636 completed successfully. Opened the normal public window page using the configured relay and public DCA airport coordinates, with useurl=1 so saved settings were bypassed rather than changed. Saved a temporary diagnostics screenshot outside the project and closed the tab to stop its polling. Updated index.html header, README.md, AGENTS.md, CHANGELOG.md and docs/FINDINGS.md with documentation-only results.
+Verified: 332 checks passed: 12 maintenance, 77 window logic, 87 window page, 25 relay mocks, 55 map logic, 76 map page. Both pages parse as ES5. Hosted browser diagnostics showed Live feed connected and 19 raw, 8 airborne; three aircraft displayed, and an ADSB.lol listed itinerary loaded. The eight is the app's filter output, not independent proof of ground state.
+Not verified: Sustained feed reliability, why earlier access refusals cleared, actual dated route legs, or the physical tablet. No private coordinates used and no Worker changes.
+Decisions: Report successful current browser operation without claiming a permanent upstream repair. Saved viewing zone stays intact.
+Next: Nathan refreshes the tablet's existing bookmark and confirms local behaviour.

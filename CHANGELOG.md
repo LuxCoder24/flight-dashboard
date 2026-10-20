@@ -117,3 +117,6 @@ GPT-6 (OpenAI), directed by Nathan: index.html and map.html show Under maintenan
 
 ## Resume from maintenance (2026-10-20)
 GPT-6 (OpenAI), directed by Nathan: index.html and map.html maintenance flags are off; browser-saved preferences untouched. tests/maintenance_test.js checks both enabled maintenance and resumed defaults (12 checks). README.md, AGENTS.md, docs/FINDINGS.md and LOG.md track current checks and release status.
+
+### Resume publication and live result (2026-10-20, documentation/header only)
+GPT-6 (OpenAI), directed by Nathan: index.html header, README.md, AGENTS.md, docs/FINDINGS.md and LOG.md record successful Pages deployment of 4baf6d0 and normal live browser response (19 raw records, 8 accepted by airborne filter, 3 displayed). 332 checks passed. No application script or Worker change in this follow-up.

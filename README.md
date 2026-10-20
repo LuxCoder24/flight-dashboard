@@ -13,8 +13,8 @@ Change: v0.9 uses the map to set up the main display viewing zone; saved wedge a
 |---|---|
 | Map edition (`map.html`) | Geographic setup map that selects the main display viewing wedge, demo/live modes and aircraft details. 55 geometry and 76 page checks pass; desktop map preview inspected. |
 | Demo mode (fake planes, button controls) | Works. 87 simulated-browser checks pass; desktop browser preview inspected. Tablet still untested. |
-| Live mode (real planes) | Uses the relay below. The map edition has not been tested against real feeds; current deployed configuration was not inspected in this session. See `docs/FINDINGS.md`. |
-| Relay (`worker/`) | Deployed by Nathan but both upstream feeds failed. Local diagnostics update awaits redeployment. 25 mock tests pass in the latest session. Current deployment configuration has not been rechecked. Setup: `docs/RELAY_SETUP.md`. |
+| Live mode (real planes) | Hosted window page successfully received live relay data on 2026-10-20 at a public airport viewpoint: 19 raw records, 8 passed the airborne filter, 3 displayed. Continued availability and tablet behaviour unverified. |
+| Relay (`worker/`) | Deployed by Nathan. Successful browser response verified 2026-10-20; yesterday's 429/403 cause and recovery mechanism remain unverified. No Worker changes this session. 25 mock tests pass. |
 | Route lookup (origin and destination) | Works from a browser (tested 2026-10-19). |
 | Runs on the real tablet | Not tried yet. |
 

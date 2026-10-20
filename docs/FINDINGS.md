@@ -157,3 +157,8 @@ VISUALLY INSPECTED in a local desktop browser: refreshed focus and three-aircraf
 ## 2026-10-20: resume maintenance and check live feed
 Written by GPT-6 (OpenAI), directed by Nathan.
 Maintenance is disabled in both pages. Automated smoke tests check the resumed default and separately force maintenance on to verify no polling and intact storage. The first new disabled-state assertion accidentally searched inline script text and failed twice; corrected it to inspect the rendered maintenance heading. The corrected maintenance suite passes 12 checks. Live relay results will be recorded after checking the public deployment with public airport coordinates only.
+
+### 2026-10-20 live browser result: successful
+GPT-6 (OpenAI), directed by Nathan. After Pages deployment of 4baf6d09961ba17315b3b7794f4dd3bc7b306649, the normal hosted window page used the configured Worker relay at the public DCA airport viewpoint with useurl=1 (saved settings bypassed, not changed). Diagnostics displayed Live feed connected and 19 raw, 8 airborne, with three aircraft rendered. A listed itinerary also loaded from ADSB.lol standing data. This establishes a successful browser/relay/feed path at that time, not continuous availability or ground-truth airborne status. The eight count is the app's normalization result. No private coordinates or saved preference records used. The diagnostic tab was closed to stop its polls.
+
+No Worker code, credentials, identities or server settings were changed. Why yesterday's refusals cleared remains UNVERIFIED. Real tablet support and current dated route legs remain unverified.
