@@ -4,7 +4,7 @@ A DIY replica of [JetClock](https://jetclock.io) (a live "what plane is above me
 
 Owner: Nathan. Planes departing DCA (Washington National) fly past his window, which faces about 190 degrees (almost due south).
 
-Last updated: 2026-10-19 by GPT-6 (OpenAI), directed by Nathan.
+Last updated: 2026-10-20 by GPT-6 (OpenAI), directed by Nathan.
 Change: v0.9 uses the map to set up the main display viewing zone; saved wedge and reach are shared.
 
 ## Status (v0.10, zone setup v0.3)
@@ -137,3 +137,5 @@ Read `AGENTS.md`. Short version: sign every edit (who directed, who wrote, date)
 2026-10-19 v0.10, GPT-6 (OpenAI), directed by Nathan: idle transitions clear trail data/opacities and CSS hides trails in clock mode. Main display refreshed with simple flat aircraft/helicopter silhouettes, quieter sky, thinner dividers and clearer type. Live routes now read ADSB.lol's public standing-data JSON, preserving every stop and labelling it Listed itinerary; not a verified dated leg. Callsign-only lookup is serialized (at least 15 seconds apart), cached for 15 minutes, 404 cached, errors delay retries 60 seconds and respect the shared feed cooldown. No coordinates sent to the route service.
 
 2026-10-19, GPT-6 (OpenAI), directed by Nathan: TEMPORARY MAINTENANCE enabled in both pages at Nathan's request. Browser initialization and live polling stop; saved preferences stay intact. Resume by changing MAINTENANCE_ENABLED true to false in index.html and map.html. v0.10 changes remain behind the screen. Tests: node tests/maintenance_test.js <path-to-jsdom>, expect 8 passed. Normal DOM suites disable maintenance only in their fixtures.
+
+2026-10-20, GPT-6 (OpenAI), directed by Nathan: maintenance disabled in index.html and map.html at Nathan's request. Saved viewing zone remains intact. tests/maintenance_test.js now verifies both the optional enabled screen and the resumed production default, 12 checks. Live relay recovery is being checked using public airport coordinates, not the saved private viewpoint.

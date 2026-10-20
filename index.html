@@ -8,6 +8,8 @@
   Project docs (same folder): README.md, AGENTS.md (LLMs start here), LOG.md, CHANGELOG.md, docs/FINDINGS.md
 
   CHANGE LOG
+  2026-10-20 GPT-6 (OpenAI), directed by Nathan: disable maintenance in
+              both pages; update maintenance tests and project status/logs.
   2026-10-19 GPT-6 (OpenAI), directed by Nathan: header/docs only, record
               maintenance publication and 328 checks in AGENTS.md and LOG.md.
   2026-10-19 GPT-6 (OpenAI), directed by Nathan: temporary maintenance screen,
@@ -492,7 +494,7 @@ function zoneOptions(v){
 
 // TEMPORARY MAINTENANCE: 2026-10-19 GPT-6 (OpenAI), directed by Nathan.
 // Change true to false in both pages when resuming. Saved browser settings are untouched.
-if (/* MAINTENANCE_ENABLED */ true) {
+if (/* MAINTENANCE_ENABLED */ false) {
  document.body.innerHTML='<main role="main" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;background:#09151e;color:#edf5f7;font-family:Arial,sans-serif;padding:24px"><div><p style="font-size:14px;letter-spacing:5px;color:#84d7ce;margin-bottom:24px">WINDOWJET</p><h1 style="font-size:36px;font-weight:400;margin-bottom:16px">Under maintenance</h1><p style="font-size:18px;color:#98afb9;line-height:1.6">Taking a break for tonight.<br>Back tomorrow.</p></div></main>';
  return;
 }

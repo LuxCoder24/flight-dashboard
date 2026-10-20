@@ -223,3 +223,11 @@ Verified: 328 checks passed: 8 production-maintenance smoke, 77 window logic, 87
 Not verified: Tablet display; current dated flight legs or position-feed recovery.
 Decisions: Stop feature work for tonight. Publish maintenance, leave v0.10 changes available to resume tomorrow. No credentials or private coordinates used.
 Next: Tomorrow disable MAINTENANCE_ENABLED in both pages, review v0.10 and resume.
+
+## 2026-10-20 09:18 (America/New_York): Resume display and check live relay
+Who: GPT-6 (OpenAI), directed by Nathan
+Did: Disabled MAINTENANCE_ENABLED in index.html and map.html without changing saved browser preferences. Expanded tests/maintenance_test.js to cover resumed production defaults alongside forced maintenance. Updated README.md, AGENTS.md, CHANGELOG.md and docs/FINDINGS.md.
+Verified: Maintenance smoke now passes 12 checks; the first new assertion incorrectly matched inline script text and failed twice, then was corrected to inspect the rendered heading. All 332 checks passed: 12 maintenance, 77 window logic, 87 window page, 25 relay mocks, 55 map logic and 76 map page. Both pages parse as ES5.
+Not verified: Live relay recovery until the public browser check below; tablet appearance or dated flight legs.
+Decisions: Use public DCA airport coordinates for a bounded normal browser check, never the user's saved viewpoint. Keep cooldowns and safeguards. No Worker or credential changes.
+Next: Publish, wait for Pages, check normal live response, then report exact result.

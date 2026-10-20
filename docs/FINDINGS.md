@@ -153,3 +153,7 @@ TESTED bounded public callsign checks: POST routeset returned 201 with an empty 
 The application therefore uses callsign-only static JSON, preserves all stops, and labels it Listed itinerary · ADSB.lol. HTTP 404 is cached as no route; failures delay further lookups. It does not send home or aircraft coordinates. Actual current dated legs and historical screenshot routes remain UNVERIFIED. No claim that these standing-data records are real-time schedules.
 
 VISUALLY INSPECTED in a local desktop browser: refreshed focus and three-aircraft layouts; user requested simpler icons after the first preview. Final icons are flat monochrome silhouettes. Saved demo preview contains no real coordinates. Tablet appearance remains UNVERIFIED.
+
+## 2026-10-20: resume maintenance and check live feed
+Written by GPT-6 (OpenAI), directed by Nathan.
+Maintenance is disabled in both pages. Automated smoke tests check the resumed default and separately force maintenance on to verify no polling and intact storage. The first new disabled-state assertion accidentally searched inline script text and failed twice; corrected it to inspect the rendered maintenance heading. The corrected maintenance suite passes 12 checks. Live relay results will be recorded after checking the public deployment with public airport coordinates only.
