@@ -68,7 +68,7 @@ The geographic basemap needs internet and HTTP/HTTPS hosting. Opening the file d
 
 The window edition now also puts Auto, Single focus, Multi aircraft, Map view, demo buttons and diagnostics inside its top-left hamburger. It closes after 15 seconds idle. Tap the screen or hamburger to wake it; Escape closes it. `debug=1` enables diagnostic logging inside that drawer rather than across the sky.
 
-A relay error shows a short retry message on the wall. Open the hamburger and enable **Show diagnostics** for the HTTP status and any `details` returned by the relay. A 502 still means the live request failed; hiding controls does not repair it. Current relay cause is not yet confirmed, and the Cloudflare Worker was not redeployed in this UI fix.
+A relay error shows a short retry message on the wall. Open the hamburger and enable **Show diagnostics** for the HTTP status and any `details` returned by the relay. A 502 still means the live request failed; hiding controls does not repair it. The earlier 502 cause is not yet confirmed. A public-browser test after deployment successfully received aircraft from the configured relay; the Cloudflare Worker was not redeployed in this UI fix.
 
 ## Aircraft views
 
