@@ -90,3 +90,6 @@ Written by GPT-6 (OpenAI), directed by Nathan.
 - index.html consumes the same validated browser preferences and checks for changes on focus/storage/visibility. Saved zones use their full reach, no altitude ceiling, geodesic wedge bounds and 60-second freshness, with a padded feed query. Existing explicit URL bypass and forced demo stay available.
 - Live route lookup results are unverified and no longer displayed as authoritative origin/destination; demo route examples stay intact.
 - tests/test_windowjet.js, tests/dom_test.js and tests/map_dom_test.js cover shared zone configuration. README.md, AGENTS.md, docs/FINDINGS.md and LOG.md document this correction and test counts.
+
+### v0.9 publication notes (2026-10-19, documentation/header only)
+GPT-6 (OpenAI), directed by Nathan: index.html header, AGENTS.md and LOG.md record successful GitHub Pages deployment of f15b321 and HTTP 200 readback of the updated window/setup source. No application script change.

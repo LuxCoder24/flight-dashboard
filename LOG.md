@@ -183,3 +183,11 @@ Verified: 66 window logic, 25 relay mock, 50 map logic and 71 map page checks pa
 Not verified: Real tablet/browser behaviour, historical flight legs, synchronized live feed snapshots or exact edge cases on the physical screen. Publication verification follows the final tests.
 Decisions: The map configures selection rather than being a separate user-facing mode. Save the zone, then open the main display. Existing browser record remains compatible; explicit useurl=1 bypass and demo=1 safety remain. Three-aircraft cap stays intentional for the wall screen. Never call either conflicting route database authoritative.
 Next: Publish the tested correction; tablet refresh, save the desired wedge, then Open display.
+
+## 2026-10-19 23:40 (America/New_York): Shared viewing-zone correction published
+Who: GPT-6 (OpenAI), directed by Nathan
+Did: Published source correction f15b3211683eb016e9dcc393f40ee663b4434b26 to main. GitHub Pages run 39364629562 completed successfully. Public index.html and map.html each returned HTTP 200 with their new setup text. Updated index.html header, AGENTS.md and CHANGELOG.md with these documentation-only release notes.
+Verified: 290 checks passed: 66 window logic, 78 window page, 25 relay mocks, 50 map logic and 71 map page. ES5 parsing passed for both pages. Public readback verified updated source, not physical tablet rendering.
+Not verified: Real tablet display, historical flight routes, or exact simultaneous flight-feed agreement.
+Decisions: Setup saves the selection rules for the main display. Up to three matching aircraft appear there. No changes to the Worker or user credentials.
+Next: Refresh the tablet, open Set up viewing zone, save the desired wedge, then Open display.
