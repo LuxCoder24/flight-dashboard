@@ -43,7 +43,7 @@ Options (add to the page address, join with `&`):
 - Window edition: https://luxcoder24.github.io/flight-dashboard/
 - Map edition: https://luxcoder24.github.io/flight-dashboard/map.html
 
-Both editions were published and the public map page was opened successfully on 2026-10-19. The source publication commit is 85e0bcd1befb4eaf339e28fb15f64eafb8fd7e13. Opening the map without options restores a saved view on this browser, or starts the demo if none is saved. To use live data, preserve the `lat`, `lon` and `api` options from the tablet bookmark while changing its path to `/flight-dashboard/map.html`. Keep coordinates in the bookmark only.
+Both editions were published and the public map page was opened successfully on 2026-10-19. The current map v0.2 publication commit is 5acc488cd5cb1307ae0ee011304fd248c08f965c; the hosted hamburger and Save view controls were verified after deployment. Opening the map without options restores a saved view on this browser, or starts the demo if none is saved. To use live data, preserve the `lat`, `lon` and `api` options from the tablet bookmark while changing its path to `/flight-dashboard/map.html`. Keep coordinates in the bookmark only.
 
 ## Map edition
 
